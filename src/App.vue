@@ -40,7 +40,7 @@ const renderAditor = () => {
       }
     ]
   })
-
+  console.log(doc)
   return doc.vnode
 }
 

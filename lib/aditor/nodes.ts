@@ -37,9 +37,11 @@ export abstract class ANode {
         this.end = 0;
         this.style = style;
         this.data = data;
+        this.type = ANodeType.Child;
     }
 
-    abstract calPosition(): void;
+    abstract calPosition(prevEnd: number): void;
+    abstract length(): number;
 }
 
 export class AditorChildNode extends ANode {
@@ -47,12 +49,17 @@ export class AditorChildNode extends ANode {
 
     constructor(name: string, style:{}, data:{}) {
         super(name, style, data);
-        this.type=ANodeType.child;
+        this.type=ANodeType.Child;
         this.children = [];
     }
 
-    calPosition() {
-        this.end = this.children.reduce((acc, child) => acc + child.end, this.start);
+    calPosition(prevEnd: number = 0) {
+        this.start = prevEnd + 1;
+        this.children.forEach((child, index) => {
+            const prevChildEnd = index === 0 ? this.start : this.children[index - 1].end;
+            child.calPosition(prevChildEnd);
+        });
+        this.end = this.children[this.children.length - 1].end+1;
     }
     addChild(child: AditorChildNode | AditorLeafNode) {
         this.children.push(child);
@@ -66,16 +73,22 @@ export class AditorChildNode extends ANode {
     deleteChildByIndex(index: number) {
         this.children.splice(index, 1);
     }
+    length(): number {
+        return this.end-this.start
+    }
 }
 
 export class AditorLeafNode extends ANode {
-
     constructor(name:string, style:{}, data:{}) {
         super(name, style, data);
-        this.type=ANodeType.leaf;
+        this.type=ANodeType.Leaf;
     }
 
-    calPosition() {
+    calPosition(prevEnd: number = 0) {
+        this.start = prevEnd + 1;
         this.end = this.start + this.data.text.length;
+    }
+    length(): number {
+        return this.end-this.start
     }
 }

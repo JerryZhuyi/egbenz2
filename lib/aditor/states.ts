@@ -17,15 +17,21 @@ interface docStruct{
 
 
 export function loadJSON2ANode(json: docStruct){
-    if(json.type == "child"){
-        const anode = new AditorChildNode(json.name, json.style, json.data)
-        anode.children = json.children.map(child => loadJSON2ANode(child))
-        return anode
-    }else{
-        const anode = new AditorLeafNode(json.name, json.style, json.data)
-        return anode
+    const _loadJSON2ANode = (json: docStruct)=>{
+        if(json.type == "child"){
+            const anode = new AditorChildNode(json.name, json.style, json.data)
+            anode.children = json.children.map(child => _loadJSON2ANode(child))
+            return anode
+        }else{
+            const anode = new AditorLeafNode(json.name, json.style, json.data)
+            return anode
+        }
     }
+    const anode = _loadJSON2ANode(json)
+    anode.calPosition(-1)
+    return anode
 }
+
 export class AditorDocState{
     root: AditorChildNode;
     vnode: VNode;
