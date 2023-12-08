@@ -1,19 +1,60 @@
 <script setup lang="ts">
-import aditorCore from '@lib/aditor/index'
+import { renderAditorFromJSON, AditorDocState } from '@lib/aditor/index'
+import { onMounted } from 'vue';
+
+let doc : AditorDocState
 
 const renderAditor = () => {
-  return aditorCore.renderComponentFromJSON({
-    name:"aditor",
-    props:{},
-    children: ()=>{return "Hello"}
+  doc = renderAditorFromJSON({
+    "name": "aditor",
+    "type": "child",
+    "style":{},
+    "data":{
+      "version":"0.0.1",
+    },
+    "children":[
+      {
+        "name":"aditorText",
+        "type": "leaf",
+        "style":{},
+        "data":{
+          "text":"Hello, world!",
+        },
+        "children":[]
+      },{
+        "name":"aditorParagraph",
+        "type": "child",
+        "style":{},
+        "data":{
+          "text":"bad world",
+        },
+        "children":[{
+          "name":"aditorText",
+          "type": "leaf",
+          "style":{},
+          "data":{
+            "text":"bad world",
+          },
+          "children":[]
+        }]
+      }
+    ]
   })
+
+  return doc.vnode
 }
+
+onMounted(() => {
+  setTimeout(()=>{
+    doc.root.children[0].data.text = "Hello, world! (updated)"
+  }, 5000)
+})
 
 </script>
 
 <template>
   <div>
-    <component :is="renderAditor"></component>
+    <component :is="renderAditor()"></component>
   </div>
 </template>
 

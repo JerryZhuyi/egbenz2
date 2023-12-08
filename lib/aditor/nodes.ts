@@ -3,57 +3,79 @@
  * @returns 
  */
 function uuid() {
+    const padStart = (str: string, length: number, padChar: string)=>{
+        while (str.length < length) {
+            str = padChar + str;
+        }
+        return str;
+    }
     const timestamp = Date.now().toString()
-    const random = this.padStart(Math.floor(Math.random() * 1000).toString(), 3, "0")
+    const random = padStart(Math.floor(Math.random() * 1000).toString(), 3, "0")
     return timestamp + random
 }
 
-export abstract class _Node {
+export enum ANodeType {
+    Child = "child",
+    Leaf = "leaf",
+}
+
+export abstract class ANode {
     id: string;
     virtualId: string;
     name: string;
+    type: string;
     start: number;
     end: number;
     style: { [key: string]: any };
     data: { [key: string]: any };
 
-    constructor(start: number, name: string) {
+    constructor(name: string, style:{}, data:{}) {
         this.id = uuid();
         this.virtualId = uuid();
         this.name = name;
-        this.start = start;
-        this.end = start;
-        this.style = {};
-        this.data = {};
+        this.start = 0;
+        this.end = 0;
+        this.style = style;
+        this.data = data;
     }
 
-    abstract calculateEnd(): void;
+    abstract calPosition(): void;
 }
 
-export class AditorChildNode extends _Node {
-    children: _Node[];
+export class AditorChildNode extends ANode {
+    children: (AditorChildNode | AditorLeafNode) [];
 
-    constructor(start: number, name: string, children: _Node[]) {
-        super(start, name);
-        this.children = children;
-        this.calculateEnd();
+    constructor(name: string, style:{}, data:{}) {
+        super(name, style, data);
+        this.type=ANodeType.child;
+        this.children = [];
     }
 
-    calculateEnd() {
+    calPosition() {
         this.end = this.children.reduce((acc, child) => acc + child.end, this.start);
     }
+    addChild(child: AditorChildNode | AditorLeafNode) {
+        this.children.push(child);
+    }
+    deleteChild(child: AditorChildNode | AditorLeafNode) {
+        this.children = this.children.filter((c) => c.id !== child.id);
+    }
+    deleteChildById(id: string) {
+        this.children = this.children.filter((c) => c.id !== id);
+    }
+    deleteChildByIndex(index: number) {
+        this.children.splice(index, 1);
+    }
 }
 
-export class AditorLeafNode extends _Node {
-    length: number;
+export class AditorLeafNode extends ANode {
 
-    constructor(start: number, name: string, length: number) {
-        super(start, name);
-        this.length = length;
-        this.calculateEnd();
+    constructor(name:string, style:{}, data:{}) {
+        super(name, style, data);
+        this.type=ANodeType.leaf;
     }
 
-    calculateEnd() {
-        this.end = this.start + this.length;
+    calPosition() {
+        this.end = this.start + this.data.text.length;
     }
 }

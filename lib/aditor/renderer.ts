@@ -1,5 +1,7 @@
 // dynamicRender.ts
 import { h } from 'vue'
+import  { AditorChildNode, AditorLeafNode } from './nodes'
+import type { VNode } from 'vue'
 
 export const components: { [key: string]: any } = {}
 
@@ -7,13 +9,26 @@ export function registerComponent(name: string, component: any) {
   components[name] = component
 }
 
-export function renderComponentFromJSON(json: any) {
-  const { name, props, children } = json
 
-  const component = components[name]
+export function renderComponentFromNode(aNode: AditorChildNode | AditorLeafNode): VNode{
+  
+  const component = components[aNode.name]
   if (!component) {
-    throw new Error(`Component ${name} not found`)
+    throw new Error(`Component ${aNode.name} not found`)
   }
-
-  return h(component, props, children)
+  
+  if(aNode instanceof AditorLeafNode) {
+    return h(component, {
+      aNode,
+      key: aNode.virtualId,
+    })
+  }else if(aNode instanceof AditorChildNode){
+    return h(component, {
+      aNode,
+      key: aNode.virtualId,
+    }, ()=>aNode.children.map(child => renderComponentFromNode(child )))
+  }else{
+    throw new Error(`Component must be leaf or child node`)
+  }
+  
 }
