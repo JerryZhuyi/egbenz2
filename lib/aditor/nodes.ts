@@ -1,7 +1,10 @@
 /**
- * 用于生成随机ID
+ * generate random id
  * @returns 
  */
+import { AditorDocView } from './views'
+import type { AditorDocState } from './states'
+
 function uuid() {
     const padStart = (str: string, length: number, padChar: string)=>{
         while (str.length < length) {
@@ -28,8 +31,10 @@ export abstract class ANode {
     end: number;
     style: { [key: string]: any };
     data: { [key: string]: any };
+    view: AditorDocView | undefined;
+    state: AditorDocState;
 
-    constructor(name: string, style:{}, data:{}) {
+    constructor(name: string, style:{}, data:{}, state: AditorDocState) {
         this.id = uuid();
         this.virtualId = uuid();
         this.name = name;
@@ -38,6 +43,8 @@ export abstract class ANode {
         this.style = style;
         this.data = data;
         this.type = ANodeType.Child;
+        this.view = undefined;
+        this.state = state;
     }
 
     abstract calPosition(prevEnd: number): void;
@@ -47,8 +54,8 @@ export abstract class ANode {
 export class AditorChildNode extends ANode {
     children: (AditorChildNode | AditorLeafNode) [];
 
-    constructor(name: string, style:{}, data:{}) {
-        super(name, style, data);
+    constructor(name: string, style:{}, data:{}, state: AditorDocState) {
+        super(name, style, data, state);
         this.type=ANodeType.Child;
         this.children = [];
     }
@@ -79,14 +86,14 @@ export class AditorChildNode extends ANode {
 }
 
 export class AditorLeafNode extends ANode {
-    constructor(name:string, style:{}, data:{}) {
-        super(name, style, data);
+    constructor(name:string, style:{}, data:{}, state: AditorDocState) {
+        super(name, style, data, state);
         this.type=ANodeType.Leaf;
     }
 
     calPosition(prevEnd: number = 0) {
         this.start = prevEnd + 1;
-        this.end = this.start + this.data.text.length;
+        this.end = this.start + this.data.text.length + 1;
     }
     length(): number {
         return this.end-this.start

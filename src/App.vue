@@ -47,6 +47,7 @@ const renderAditor = () => {
 onMounted(() => {
   setTimeout(()=>{
     doc.root.children[0].data.text = "Hello, world! (updated)"
+    doc.root.calPosition(-1)
   }, 5000)
 })
 

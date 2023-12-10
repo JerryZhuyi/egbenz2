@@ -22,14 +22,16 @@
     "noFallthroughCasesInSwitch": true,
 
     "allowJs": true,
-    
+    "types": ["vite,client" ],
+
     /* Path */
     "baseUrl": ".",
     "paths": {
-      "@lib/*": ["lib/*"]
+      "@lib/*": ["lib/*"],
     },
     "allowSyntheticDefaultImports": true
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue"],
+  "exclude": ["./node_modules", "./static_dist", "./static_init"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

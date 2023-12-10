@@ -2,8 +2,7 @@ import { reactive } from 'vue';
 
 import { registerComponent, renderComponentFromNode } from './renderer';
 import { AditorDocState, loadJSON2ANode } from './states';
-
-import { AditorChildNode, AditorLeafNode } from './nodes'
+import { AditorDocView } from './views';
 
 import aditor from './components/aditor.vue';
 import aditorText from './components/aditorText.vue';
@@ -14,16 +13,17 @@ registerComponent(aditorParagraph.name, aditorParagraph)
 registerComponent(aditorText.name, aditorText)
 
 export function renderAditorFromJSON(json:any){
-    const anode = reactive(loadJSON2ANode(json))
+    const docState = new AditorDocState()
+    const docView = new AditorDocView(docState)
+    const anode = reactive(loadJSON2ANode(json, docState))
     const vnode = renderComponentFromNode(anode)
-    const doc = new AditorDocState((anode as AditorChildNode), vnode)
+    docState.init(anode, vnode, docView)
 
-    return doc 
+    return docState 
 }
 
 export {
-    AditorChildNode,
-    AditorLeafNode,
     AditorDocState
+    , registerComponent
 }
 
