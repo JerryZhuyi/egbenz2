@@ -191,6 +191,8 @@ function genDefaultSysInputEventHandlers(): SysEventInterface{
         keyup: () => {},
         keypress: () => {},
         click: (e: Event, docState:AditorDocState, docView:AditorDocView) => {
+            docState.sels.updateSelections()
+            console.log(docState.sels.selections)
         },
         mousedown: () => {},
         mouseleave: () => {},

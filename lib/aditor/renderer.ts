@@ -21,13 +21,13 @@ export function renderComponentFromNode(aNode: AditorChildNode | AditorLeafNode)
     return h(component, {
       aNode,
       key: aNode.virtualId,
-      id: `_aditor-${aNode.id}`,
+      id: `_aditor-${aNode.start}`,
     })
   }else if(aNode instanceof AditorChildNode){
     return h(component, {
       aNode,
       key: aNode.virtualId,
-      id: `_aditor-${aNode.id}`,
+      id: `_aditor-${aNode.start}`,
     }, ()=>aNode.children.map(child => renderComponentFromNode(child )))
   }else{
     throw new Error(`Component must be leaf or child node`)

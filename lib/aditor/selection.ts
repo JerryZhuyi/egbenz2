@@ -63,20 +63,41 @@ function _innerGetSingleDOMSelection(domNode: Node, offset:number) {
     const parentNode: Node | Element | null | undefined = domNode.parentNode
 
     let domId:string | undefined | null = null;
+    let domHashId: string | undefined | null = null;
+    let parentId:string | undefined | null = null;
+    let parentHashId: string | undefined | null = null;
+
     try{
         domId = (domNode as Element)?.getAttribute("id");
     }catch{
         // Handle the error here if needed
     }
+    try{
+        domHashId = (domNode as Element)?.getAttribute("hash_id");
+    }catch{
+        // Handle the error here if needed
+    }
+    try{
+        parentId = (parentNode as Element)?.getAttribute("id");
+    }catch{
+        // Handle the error here if needed
+    }
+    try{
+        parentHashId = (parentNode as Element)?.getAttribute("hash_id");
+    }catch{
+        // Handle the error here if needed
+    }
     
-    const parentId:string | undefined | null = (parentNode as Element)?.getAttribute("id")
-
     // For Text nodes, we need to check if the parent node can be selected. If it doesn't have a validAditorId, return null.
     if (nodeType === 3 && parentNode && validAditorId(parentId)) {
         return {id:parentId, offset}
+    } else if(nodeType === 3 && parentNode && validAditorId(parentHashId)){
+        return {id:parentHashId, offset}
     } else if(validAditorId(domId)){
         return {id:domId, offset}
-    } else{
+    } else if(validAditorId(domHashId)){
+        return {id:domHashId, offset}
+    }else{
         return {id:null, offset:null}
     }
 }

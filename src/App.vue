@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { renderAditorFromJSON, AditorDocState } from '@lib/aditor/index'
 import { onMounted } from 'vue';
+import { request } from './api';
 
 let doc : AditorDocState
 
@@ -40,15 +41,13 @@ const renderAditor = () => {
       }
     ]
   })
-  console.log(doc)
   return doc.vnode
 }
 
 onMounted(() => {
-  setTimeout(()=>{
-    doc.root.children[0].data.text = "Hello, world! (updated)"
-    doc.root.calPosition(-1)
-  }, 5000)
+  request.getFiles().then((res) => {
+    console.log(res)
+  })
 })
 
 </script>
