@@ -8,6 +8,10 @@ export const API_URLS = {
     api_files:{
         url:"/api/files",
         method:"get",
+    },
+    api_aditor_files:{
+        url:"api/files",
+        method:"get"
     }
 }
 
@@ -16,4 +20,8 @@ export const request = {
         url: API_URLS.api_files.url,
         method: API_URLS.api_files.method,
     }),
+    getAditorFiles: ()=>instance({
+        url: API_URLS.api_aditor_files.url,
+        method: API_URLS.api_aditor_files.method,
+    })
 }

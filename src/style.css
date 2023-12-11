@@ -11,6 +11,11 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  --e-border-color:#e8e8e8;
+  --e-box-shadow-right:1px 0 5px rgba(0, 0, 0, 0.05);
+  --e-box-shadow-bottom: 0 1px 5px rgba(0, 0, 0, 0.1);
+  --e-box-shadow-color:rgba(0, 0, 0, 0.1);
 }
 
 a {
@@ -24,7 +29,6 @@ a:hover {
 
 body {
   margin: 0;
-  display: flex;
   place-items: center;
   min-width: 320px;
   min-height: 100vh;
@@ -56,13 +60,6 @@ button:focus-visible {
 
 .card {
   padding: 2em;
-}
-
-#app {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
 }
 
 @media (prefers-color-scheme: light) {

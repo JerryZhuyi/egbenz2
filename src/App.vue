@@ -1,51 +1,12 @@
 <script setup lang="ts">
-import { renderAditorFromJSON, AditorDocState } from '@lib/aditor/index'
 import { onMounted } from 'vue';
 import { request } from './api';
-
-let doc : AditorDocState
-
-const renderAditor = () => {
-  doc = renderAditorFromJSON({
-    "name": "aditor",
-    "type": "child",
-    "style":{},
-    "data":{
-      "version":"0.0.1",
-    },
-    "children":[
-      {
-        "name":"aditorText",
-        "type": "leaf",
-        "style":{},
-        "data":{
-          "text":"Hello, world!",
-        },
-        "children":[]
-      },{
-        "name":"aditorParagraph",
-        "type": "child",
-        "style":{},
-        "data":{
-          "text":"bad world",
-        },
-        "children":[{
-          "name":"aditorText",
-          "type": "leaf",
-          "style":{},
-          "data":{
-            "text":"bad world",
-          },
-          "children":[]
-        }]
-      }
-    ]
-  })
-  return doc.vnode
-}
+import Explorer from './components/Explorer.vue';
+import FileNav from './components/FileNav.vue';
+import Editor from './components/Editor.vue';
 
 onMounted(() => {
-  request.getFiles().then((res) => {
+  request.getAditorFiles().then((res) => {
     console.log(res)
   })
 })
@@ -53,24 +14,58 @@ onMounted(() => {
 </script>
 
 <template>
-  <div>
-    <component :is="renderAditor()"></component>
+  <div class="app">
+    <div class="explorer">
+      <explorer></explorer>
+    </div>
+    <div class="content">
+      <div class="file-nav">
+        <file-nav></file-nav>
+      </div>
+      <div class="editor">
+        <editor></editor>
+      </div>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
+.app {
+  display: flex;
+  height: 100vh;
+  position: relative;
 }
 
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
+.explorer {
+  width: 300px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
 }
 
-.logo.vue:hover {
-  filter: drop-shadow(0 0 2em #42b883aa);
+.content {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 300px;
+}
+
+.file-nav {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50px; /* 你可以根据需要调整这个值 */
+}
+
+.editor {
+  position: absolute;
+  top: 50px; /* 这个值应该和 .file-nav 的 height 相同 */
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: auto;
 }
 </style>

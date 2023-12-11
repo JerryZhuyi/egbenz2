@@ -7,6 +7,7 @@
 <script lang="ts">
 import { defineComponent,ref, onMounted, PropType} from 'vue'
 import { AditorChildNode, AditorLeafNode } from '@lib/aditor/nodes.ts';
+import { AditorDocState } from '@lib/aditor/index'
 
 export default defineComponent({
   name: 'aditor',
@@ -14,13 +15,17 @@ export default defineComponent({
     aNode:{
       type: Object as PropType<AditorChildNode | AditorLeafNode>,
       required: true,
+    },
+    state:{
+      type: Object as PropType<AditorDocState>,
+      required: true,
     }
   },
   setup(props) {
     const aditorRef = ref()
     onMounted(() => {
-      props.aNode.state.docView.bindDocSysEvent(aditorRef.value);
-      props.aNode.state.docView.bindGlobalSysEvent(aditorRef.value);
+      props.state.docView.bindDocSysEvent(aditorRef.value);
+      props.state.docView.bindGlobalSysEvent(aditorRef.value);
     })
 
     return {
