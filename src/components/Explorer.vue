@@ -1,37 +1,78 @@
 <script setup lang="ts">
 import { ref } from 'vue';
+import { Document,DocumentAdd,FolderAdd,RefreshLeft } from '@element-plus/icons-vue';
+import Contextmenu from './Contextmenu.vue';
 
-// 假设我们有以下的文件和文件夹结构
-const files = ref([
-  { name: 'Folder 1', type: 'folder', children: [{ name: 'File 1', type: 'file' }], isOpen: false },
-  { name: 'File 2', type: 'file' },
-]);
+interface Tree {
+  label: string,
+  children?: Tree[]
+}
 
-const toggleFolder = (folder:any) => {
-  folder.isOpen = !folder.isOpen;
-};
+const contextmenuRef = ref()
+
+const handleNodeClick = (data: Tree) => {
+  console.log(data)
+}
+
+const showContextMenu = (e: MouseEvent)=>{
+  contextmenuRef.value.clickButtonManual(e)
+}
+
+const data: Tree[] = [
+  {
+    label: '所有笔记',
+    children: [
+      {
+        label: '历史',
+        children: [
+          {
+            label: '古代史超长名称测试，一口气拉到最最最最最最最最最最最最最最最最最最最最右边，第12345吗.txt',
+          },
+        ],
+      },
+    ],
+  },
+  {
+    label: '配置文件',
+    children: [
+      {
+        label: '链接地址',
+      }
+    ],
+  },
+]
+
+const defaultProps = {
+  children: 'children',
+  label: 'label',
+}
 </script>
 
 <template>
-  <div class="explorer-body">
+  <div @contextmenu.prevent="showContextMenu" class="explorer-body">
+    <Contextmenu ref="contextmenuRef"/>
     <div class="exporer-head">
-      <div class="head-content">目录</div>
+      <span class="head-content">/</span>
+      <span class="head-options">
+        <el-button-group>
+          <el-button :size="'small'" :icon="DocumentAdd" />
+          <el-button :size="'small'" :icon="FolderAdd" />
+          <el-button :size="'small'" :icon="RefreshLeft" />
+        </el-button-group>
+      </span>
     </div>
-    <ul>
-      <li v-for="file in files" :key="file.name" :class="{ folder: file.type === 'folder' }">
-        <div @click="file.type === 'folder' && toggleFolder(file)">
-          <span class="icon">{{ file.type === 'folder' ? (file.isOpen ? '▽' : '▷') : '📄' }}</span>
-          <span>{{ file.name }}</span>
-        </div>
-        <ul v-if="file.type === 'folder' && file.isOpen">
-          <li v-for="child in file.children" :key="child.name">
-            <span class="icon">{{ child.type === 'folder' ? '▷' : '📄' }}</span>
-            <span>{{ child.name }}</span>
-          </li>
-        </ul>
-      </li>
-    </ul>
-    
+    <div class="exporer-content">
+      <el-tree :data="data" :props="defaultProps" @node-click="handleNodeClick" :indent="8">
+        <template #default="{ node, data }">
+          <span class="custom-tree-node">
+            <el-icon v-if="!data?.children" size="14px" style="margin-right: 5px;">
+              <Document />
+            </el-icon>
+            <span>{{ node.label }}</span>
+          </span>
+        </template>
+      </el-tree>
+    </div>
   </div>
 </template>
 
@@ -46,17 +87,21 @@ const toggleFolder = (folder:any) => {
 .exporer-head {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   height: 50px;
-
 }
 .exporer-head .head-content {
   margin-left: 20px;
 }
-.folder > div {
-  cursor: pointer;
+.exporer-head .head-options {
+  margin-right: 20px;
 }
 
-.icon {
-  margin-right: 5px;
+.custom-tree-node {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  padding-right: 8px;
 }
 </style>
