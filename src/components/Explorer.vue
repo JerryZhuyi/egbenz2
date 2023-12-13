@@ -42,6 +42,7 @@ const data: Tree[] = [
   },
 ]
 
+
 const defaultProps = {
   children: 'children',
   label: 'label',
@@ -49,10 +50,10 @@ const defaultProps = {
 </script>
 
 <template>
-  <div @contextmenu.prevent="showContextMenu" class="explorer-body">
+  <div class="explorer-body">
     <Contextmenu ref="contextmenuRef"/>
     <div class="exporer-head">
-      <span class="head-content">/</span>
+      <span class="head-content">Egbenz</span>
       <span class="head-options">
         <el-button-group>
           <el-button :size="'small'" :icon="DocumentAdd" />
@@ -61,7 +62,7 @@ const defaultProps = {
         </el-button-group>
       </span>
     </div>
-    <div class="exporer-content">
+    <div class="exporer-content" @contextmenu.prevent="showContextMenu" >
       <el-tree :data="data" :props="defaultProps" @node-click="handleNodeClick" :indent="8">
         <template #default="{ node, data }">
           <span class="custom-tree-node">

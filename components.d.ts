@@ -7,20 +7,23 @@ export {}
 
 declare module 'vue' {
   export interface GlobalComponents {
+    Breadcrumb: typeof import('./src/components/Breadcrumb.vue')['default']
     Contextmenu: typeof import('./src/components/Contextmenu.vue')['default']
     Editor: typeof import('./src/components/Editor.vue')['default']
+    ElBreadcrumb: typeof import('element-plus/es')['ElBreadcrumb']
+    ElBreadcrumbItem: typeof import('element-plus/es')['ElBreadcrumbItem']
     ElButton: typeof import('element-plus/es')['ElButton']
     ElButtonGroup: typeof import('element-plus/es')['ElButtonGroup']
+    ElDropdown: typeof import('element-plus/es')['ElDropdown']
+    ElDropdownItem: typeof import('element-plus/es')['ElDropdownItem']
+    ElDropdownMenu: typeof import('element-plus/es')['ElDropdownMenu']
     ElIcon: typeof import('element-plus/es')['ElIcon']
     ElPopover: typeof import('element-plus/es')['ElPopover']
-    ElRow: typeof import('element-plus/es')['ElRow']
+    ElTabPane: typeof import('element-plus/es')['ElTabPane']
+    ElTabs: typeof import('element-plus/es')['ElTabs']
     ElTree: typeof import('element-plus/es')['ElTree']
     Explorer: typeof import('./src/components/Explorer.vue')['default']
-    ExplorerContextmenu: typeof import('./src/components/ExplorerContextmenu.vue')['default']
     FileNav: typeof import('./src/components/FileNav.vue')['default']
     HelloWorld: typeof import('./src/components/HelloWorld.vue')['default']
-  }
-  export interface ComponentCustomProperties {
-    vPopover: typeof import('element-plus/es')['ElPopoverDirective']
   }
 }

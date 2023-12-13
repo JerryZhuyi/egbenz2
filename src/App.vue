@@ -1,9 +1,26 @@
 <script setup lang="ts">
-import { onMounted } from 'vue';
+import { onMounted, ref, reactive } from 'vue';
 import { request } from './api';
 import Explorer from './components/Explorer.vue';
-import FileNav from './components/FileNav.vue';
+import Breadcrumb from './components/Breadcrumb.vue';
 import Editor from './components/Editor.vue';
+
+let tabIndex = 2
+const editableTabsValue = ref('2')
+const editableTabs = ref([
+  {
+    title: 'Tab 1',
+    name: '1',
+    content: 'Tab 1 content',
+  },
+  {
+    title: 'Tab 2',
+    name: '2',
+    content: 'Tab 2 content',
+  },
+])
+
+const paths = reactive(['/', '所有笔记', '历史', '古代史超长名称测试，一口气拉到最'])
 
 onMounted(() => {
   request.getAditorFiles().then((res) => {
@@ -19,12 +36,28 @@ onMounted(() => {
       <explorer></explorer>
     </div>
     <div class="content">
-      <div class="file-nav">
-        <file-nav></file-nav>
-      </div>
-      <div class="editor">
-        <editor></editor>
-      </div>
+      <el-tabs
+        v-model="editableTabsValue"
+        type="card"
+        closable
+      >
+        <el-tab-pane
+          v-for="item in editableTabs"
+          :key="item.name"
+          :label="item.title"
+          :name="item.name"
+        >
+          <div class="content-main">
+            <div class="breadcrumb">
+              <breadcrumb :paths="paths"></breadcrumb>
+            </div>
+            <div>
+              <editor></editor>
+            </div>
+          </div>
+        </el-tab-pane>
+      </el-tabs>
+
     </div>
   </div>
 </template>
@@ -51,21 +84,15 @@ onMounted(() => {
   bottom: 0;
   left: 300px;
 }
-
-.file-nav {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 50px; /* 你可以根据需要调整这个值 */
+.content :deep(.el-tabs .el-tabs__content){
+  height: calc(100vh - 41px);
+}
+.content :deep(.el-tabs__header){
+  margin: 0;
 }
 
-.editor {
-  position: absolute;
-  top: 50px; /* 这个值应该和 .file-nav 的 height 相同 */
-  left: 0;
-  right: 0;
-  bottom: 0;
-  overflow: auto;
+.content-main{
+  padding: 5px 15px;
 }
+
 </style>
