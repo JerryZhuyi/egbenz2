@@ -10,15 +10,16 @@ export const API_URLS = {
         method:"get",
     },
     api_aditor_files:{
-        url:"api/files",
+        url:"/api/files",
         method:"get"
     }
 }
 
 export const request = {
-    getFiles: ()=>instance({
+    getFiles: (params?: {})=>instance({
         url: API_URLS.api_files.url,
         method: API_URLS.api_files.method,
+        params,
     }),
     getAditorFiles: ()=>instance({
         url: API_URLS.api_aditor_files.url,

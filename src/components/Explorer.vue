@@ -2,51 +2,25 @@
 import { ref } from 'vue';
 import { Document,DocumentAdd,FolderAdd,RefreshLeft } from '@element-plus/icons-vue';
 import Contextmenu from './Contextmenu.vue';
-
-interface Tree {
-  label: string,
-  children?: Tree[]
-}
+import ExplorerState from './Explorer'
+import { onMounted } from 'vue';
 
 const contextmenuRef = ref()
-
-const handleNodeClick = (data: Tree) => {
-  console.log(data)
-}
 
 const showContextMenu = (e: MouseEvent)=>{
   contextmenuRef.value.clickButtonManual(e)
 }
 
-const data: Tree[] = [
-  {
-    label: '所有笔记',
-    children: [
-      {
-        label: '历史',
-        children: [
-          {
-            label: '古代史超长名称测试，一口气拉到最最最最最最最最最最最最最最最最最最最最右边，第12345吗.txt',
-          },
-        ],
-      },
-    ],
-  },
-  {
-    label: '配置文件',
-    children: [
-      {
-        label: '链接地址',
-      }
-    ],
-  },
-]
-
-
 const defaultProps = {
   children: 'children',
   label: 'label',
+  path: 'path',
+  isLeaf: 'isLeaf',
 }
+onMounted(()=>{
+  console.log(ExplorerState.state.root)
+})
+
 </script>
 
 <template>
@@ -63,7 +37,15 @@ const defaultProps = {
       </span>
     </div>
     <div class="exporer-content" @contextmenu.prevent="showContextMenu" >
-      <el-tree :data="data" :props="defaultProps" @node-click="handleNodeClick" :indent="8">
+      <!-- :data="[ExplorerState.state.tree]"  -->
+      <el-tree 
+        lazy 
+        auto-expand-parent
+        :indent="8"
+        :props="defaultProps" 
+        :load="ExplorerState.loadNode" 
+        @node-click="ExplorerState.nodeClickHandler"
+        >
         <template #default="{ node, data }">
           <span class="custom-tree-node">
             <el-icon v-if="!data?.children" size="14px" style="margin-right: 5px;">
