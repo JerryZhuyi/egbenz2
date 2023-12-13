@@ -1,12 +1,20 @@
 <script setup lang="ts">
 import { ArrowRight } from '@element-plus/icons-vue';
+import { computed } from 'vue';
 
 const props = defineProps({
-  paths: {
-    type: [],
-    default: () => ['/'],
+  openedNodePath: {
+    // readonly
+    type: String, // Provide the correct type for the paths prop
+    default: () => ['所有笔记'],
   },
 })
+
+const paths = computed(() => {
+  const paths = props.openedNodePath.split('/')
+  return paths
+})
+
 </script>
 
 <template>

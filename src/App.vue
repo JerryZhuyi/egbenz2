@@ -1,13 +1,12 @@
 <script setup lang="ts">
-import { onMounted, ref, reactive } from 'vue';
+import { onMounted, ref, computed } from 'vue';
 import Explorer from './components/Explorer.vue';
 import explorerState from './components/Explorer.ts'
 import Breadcrumb from './components/Breadcrumb.vue';
 import Editor from './components/Editor.vue';
 
-const activeTabName = ref(explorerState.state.openedDoc?.path)
-const paths = reactive(['所有笔记', '历史', '古代史超长名称测试，一口气拉到最'])
 onMounted(() => {
+  console.log(explorerState)
 })
 
 </script>
@@ -19,19 +18,19 @@ onMounted(() => {
     </div>
     <div class="content">
       <el-tabs
-        v-model="activeTabName"
+        v-model="explorerState.openedNodePath.value"
         type="card"
         closable
       >
         <el-tab-pane
-          v-for="item in explorerState.state.openedDocs"
-          :key="item.path"
-          :label="item.label"
-          :name="item.label"
+          v-for="item in explorerState.state.openedNodes"
+          :key="item.data.path"
+          :label="item.data.label"
+          :name="item.data.path"
         >
           <div class="content-main">
             <div class="breadcrumb">
-              <breadcrumb :paths="paths"></breadcrumb>
+              <breadcrumb :openedNodePath="explorerState.openedNodePath.value"></breadcrumb>
             </div>
             <div>
               <editor></editor>

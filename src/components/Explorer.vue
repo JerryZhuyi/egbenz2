@@ -11,6 +11,7 @@ const showContextMenu = (e: MouseEvent)=>{
   contextmenuRef.value.clickButtonManual(e)
 }
 
+
 const defaultProps = {
   children: 'children',
   label: 'label',
@@ -41,14 +42,15 @@ onMounted(()=>{
       <el-tree 
         lazy 
         auto-expand-parent
+        highlight-current
         :indent="8"
         :props="defaultProps" 
         :load="ExplorerState.loadNode" 
         @node-click="ExplorerState.nodeClickHandler"
         >
         <template #default="{ node, data }">
-          <span class="custom-tree-node">
-            <el-icon v-if="!data?.children" size="14px" style="margin-right: 5px;">
+          <span class="custom-tree-node" >
+            <el-icon v-if="data.isLeaf" size="14px" style="margin-right: 5px; margin-left: -18px;">
               <Document />
             </el-icon>
             <span>{{ node.label }}</span>
