@@ -2,6 +2,7 @@
 import { h } from 'vue'
 import  { AditorChildNode, AditorLeafNode } from './nodes'
 import type { VNode } from 'vue'
+import { AditorDocState } from '.'
 
 export const components: { [key: string]: any } = {}
 
@@ -10,7 +11,7 @@ export function registerComponent(name: string, component: any) {
 }
 
 
-export function renderComponentFromNode(aNode: AditorChildNode | AditorLeafNode): VNode{
+export function renderComponentFromNode(aNode: AditorChildNode | AditorLeafNode, state: AditorDocState): VNode{
   
   const component = components[aNode.name]
   if (!component) {
@@ -20,15 +21,17 @@ export function renderComponentFromNode(aNode: AditorChildNode | AditorLeafNode)
   if(aNode instanceof AditorLeafNode) {
     return h(component, {
       aNode,
+      state,
       key: aNode.virtualId,
       id: `_aditor-${aNode.start}`,
     })
   }else if(aNode instanceof AditorChildNode){
     return h(component, {
       aNode,
+      state,
       key: aNode.virtualId,
       id: `_aditor-${aNode.start}`,
-    }, ()=>aNode.children.map(child => renderComponentFromNode(child )))
+    }, ()=>aNode.children.map(child => renderComponentFromNode(child, state)))
   }else{
     throw new Error(`Component must be leaf or child node`)
   }

@@ -55,7 +55,7 @@ function importMock() {
         
     });
 
-    Mock.mock(API_URLS.api_aditor_files.url, API_URLS.api_aditor_files.method, {
+    Mock.mock(RegExp(API_URLS.api_aditor_files.url + ".*"), API_URLS.api_aditor_files.method, {
         status: 200,
         msg: 'success',
         data: {

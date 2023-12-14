@@ -1,5 +1,5 @@
 <template>
-  <div ref="aditorRef" contenteditable="true">
+  <div class="aditor" ref="aditorRef" contenteditable="true">
     <slot></slot>
   </div>
 </template>
@@ -34,3 +34,10 @@ export default defineComponent({
   }
 })
 </script>
+
+<style scoped>
+.aditor{
+  /* 取消contentediable元素的边框 */
+  outline: none;
+}
+</style>

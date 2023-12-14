@@ -3,6 +3,9 @@ import { reactive, readonly, computed } from 'vue';
 import { request } from '../api/index.ts';
 import type Node from 'element-plus/es/components/tree/src/model/node'
 import { ElTree } from 'element-plus'
+import { docStruct } from '@lib/aditor'
+
+export type CustomNode = Node & { data: FilesTreeNode };
 
 const FIXED_ROOT = '所有笔记';
 
@@ -11,17 +14,25 @@ export interface FilesTreeNode {
     path: string;
     isLeaf: boolean;
     children?: FilesTreeNode[];
+    docJson?: docStruct;
+}
+export const defaultProps = {
+    children: 'children',
+    label: 'label',
+    path: 'path',
+    isLeaf: 'isLeaf',
 }
 
 const state = reactive({
-    root: {} as Node,
-    openedNodes: [] as Node[],
-    openedNode: {} as Node,
+    elTreeRef: {} as InstanceType<typeof ElTree>,
+    root: {} as CustomNode,
+    openedNodes: [] as CustomNode[],
+    openedNode: {} as CustomNode,
 });
 
-async function loadNode(node: Node, resolve: (data: FilesTreeNode[]) => void) {
+async function loadNode(node: Node|CustomNode, resolve: (data: FilesTreeNode[]) => void) {
     if (node.level == 0) {
-        state.root = node
+        state.root = node as CustomNode
         resolve([{ label: FIXED_ROOT, path: FIXED_ROOT, isLeaf: false }])
     } else if (!node.isLeaf) {
         let childNodes: FilesTreeNode[] = []
@@ -44,30 +55,36 @@ async function loadNode(node: Node, resolve: (data: FilesTreeNode[]) => void) {
             })
             resolve(childNodes)
         }).catch((res) => {
+            console.warn(res)
             resolve([])
         })
     }
 }
 
-function nodeClickHandler(data: FilesTreeNode, node: Node, tree: Node, e) {
-    console.log(tree)
+function nodeClickHandler(data: FilesTreeNode, node: CustomNode, tree: InstanceType<typeof ElTree>, e: MouseEvent) {
     if (node.isLeaf) {
-        if (!state.openedNodes.some((node) => node.data.path == data.path)) {
-            state.openedNodes.push(node)
-        }
-        // 如果已经打开了文档，就切换到该文档
         setOpenedDoc(data.path)
     }
 }
 
 function setOpenedDoc(path: string) {
-    // 遍历node树，根据path找到对应node的id 
-    state.openedNode = state.openedNodes.find((node) => node.data.path == path) || state.root;
-    // 把其他打开的设置为非当前
-    state.openedNodes.forEach((node) => {
-        node.isCurrent = false
-    })
-    state.openedNode.isCurrent = true
+    console.log("setOpenedDoc")
+    if (!state.openedNodes.some((node) => node.data.path == path)) {
+        const openedNode = state.elTreeRef.getNode(path) as CustomNode
+        state.openedNodes.push(openedNode)
+        // 获取文件内容
+        request.getAditorFiles({ path }).then((res) => {
+            if(res.data.status == 200){
+                openedNode.data.docJson = res.data.data.doc
+            }
+        }).catch((res)=>{
+            console.warn(res)
+        })
+    }
+
+    state.openedNode = state.openedNodes.find((node) => node.data.path == path) || {} as CustomNode;
+
+    state.elTreeRef.setCurrentKey(path)
 }
 
 
@@ -80,6 +97,9 @@ const openedNodePath = computed({
     }
 })
 
+function mountElTreeRef(tree: InstanceType<typeof ElTree>) {
+    state.elTreeRef = tree
+}
 
 export default {
     state: readonly(state), // 使用 readonly 来防止直接修改状态
@@ -87,4 +107,5 @@ export default {
     nodeClickHandler,
     setOpenedDoc,
     openedNodePath,
+    mountElTreeRef
 };

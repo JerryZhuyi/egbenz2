@@ -1,12 +1,11 @@
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue';
+import { onMounted } from 'vue';
 import Explorer from './components/Explorer.vue';
 import explorerState from './components/Explorer.ts'
 import Breadcrumb from './components/Breadcrumb.vue';
 import Editor from './components/Editor.vue';
 
 onMounted(() => {
-  console.log(explorerState)
 })
 
 </script>
@@ -33,7 +32,7 @@ onMounted(() => {
               <breadcrumb :openedNodePath="explorerState.openedNodePath.value"></breadcrumb>
             </div>
             <div>
-              <editor></editor>
+              <editor :docJson="(item.data.docJson as undefined)"></editor>
             </div>
           </div>
         </el-tab-pane>

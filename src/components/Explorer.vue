@@ -3,8 +3,10 @@ import { ref } from 'vue';
 import { Document,DocumentAdd,FolderAdd,RefreshLeft } from '@element-plus/icons-vue';
 import Contextmenu from './Contextmenu.vue';
 import ExplorerState from './Explorer'
+import {defaultProps} from './Explorer'
 import { onMounted } from 'vue';
 
+const elTreeRef = ref()
 const contextmenuRef = ref()
 
 const showContextMenu = (e: MouseEvent)=>{
@@ -12,14 +14,8 @@ const showContextMenu = (e: MouseEvent)=>{
 }
 
 
-const defaultProps = {
-  children: 'children',
-  label: 'label',
-  path: 'path',
-  isLeaf: 'isLeaf',
-}
 onMounted(()=>{
-  console.log(ExplorerState.state.root)
+  ExplorerState.mountElTreeRef(elTreeRef.value)
 })
 
 </script>
@@ -38,11 +34,12 @@ onMounted(()=>{
       </span>
     </div>
     <div class="exporer-content" @contextmenu.prevent="showContextMenu" >
-      <!-- :data="[ExplorerState.state.tree]"  -->
       <el-tree 
+        ref="elTreeRef"
         lazy 
         auto-expand-parent
         highlight-current
+        node-key="path"
         :indent="8"
         :props="defaultProps" 
         :load="ExplorerState.loadNode" 

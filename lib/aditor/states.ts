@@ -9,7 +9,7 @@ import {VirtualSelections} from "./selection";
 /**
  * Represents the structure of a document.
  */
-interface docStruct{
+export interface docStruct{
     name: string,
     type: ANodeType,
     style: {},
