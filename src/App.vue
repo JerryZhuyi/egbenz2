@@ -20,6 +20,7 @@ onMounted(() => {
         v-model="explorerState.openedNodePath.value"
         type="card"
         closable
+        @tab-remove="explorerState.closeOpenedDoc"
       >
         <el-tab-pane
           v-for="item in explorerState.state.openedNodes"

@@ -101,11 +101,27 @@ function mountElTreeRef(tree: InstanceType<typeof ElTree>) {
     state.elTreeRef = tree
 }
 
+function closeOpenedDoc(path: string) {
+    if(state.openedNode.data.path == path){
+        state.openedNodes.forEach((node, index)=>{
+            if(node.data.path === path){
+                state.openedNode = state.openedNodes[index+1] || state.openedNodes[index-1] || {} as CustomNode
+                if(state.openedNode?.data?.path){
+                    setOpenedDoc(state.openedNode.data.path)
+                }
+            }
+        })
+    }
+
+    state.openedNodes = state.openedNodes.filter((node) => node.data.path != path)
+}
+
 export default {
     state: readonly(state), // 使用 readonly 来防止直接修改状态
     loadNode,
     nodeClickHandler,
     setOpenedDoc,
     openedNodePath,
-    mountElTreeRef
+    mountElTreeRef,
+    closeOpenedDoc
 };
