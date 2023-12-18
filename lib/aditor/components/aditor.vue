@@ -1,5 +1,5 @@
 <template>
-  <div class="aditor" ref="aditorRef" contenteditable="true">
+  <div :id="aid" class="aditor" ref="aditorRef" contenteditable="true">
     <slot></slot>
   </div>
 </template>
@@ -7,7 +7,7 @@
 <script lang="ts">
 import { defineComponent,ref, onMounted, PropType} from 'vue'
 import { AditorChildNode, AditorLeafNode } from '@lib/aditor/nodes.ts';
-import { AditorDocState } from '@lib/aditor/index'
+import { AditorDocView } from '@lib/aditor/index'
 
 export default defineComponent({
   name: 'aditor',
@@ -16,20 +16,22 @@ export default defineComponent({
       type: Object as PropType<AditorChildNode | AditorLeafNode>,
       required: true,
     },
-    state:{
-      type: Object as PropType<AditorDocState>,
+    docView:{
+      type: Object as PropType<AditorDocView>,
       required: true,
     }
   },
   setup(props) {
     const aditorRef = ref()
+    const aid=props.aNode.virtualId
     onMounted(() => {
-      props.state.docView.bindDocSysEvent(aditorRef.value);
-      props.state.docView.bindGlobalSysEvent(aditorRef.value);
+      props.docView.bindDocSysEvent(aditorRef.value);
+      props.docView.bindGlobalSysEvent(aditorRef.value);
     })
 
     return {
       aditorRef,
+      aid
     }
   }
 })

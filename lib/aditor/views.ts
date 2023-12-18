@@ -1,29 +1,29 @@
 import type { AditorDocState } from "./states";
+import { collapseDOMSelection, setDOMSelection, VirtualSelection } from "./selection";
+import { VNode,nextTick } from 'vue'
+import { AditorChildNode, AditorLeafNode } from "./nodes";
+type SysInputEventsHandlerKey = keyof SysEventsHandler;
 
-type HandlerEvents = Event|KeyboardEvent|MouseEvent|FocusEvent|WheelEvent|CompositionEvent|InputEvent|DragEvent
-type SysEventHandler = (event: HandlerEvents, docState: AditorDocState, docView: AditorDocView) => void;
-type SysInputEventKey = keyof SysEventInterface;
-
-interface SysEventInterface {
-    keydown?: SysEventHandler;
-    keyup?: SysEventHandler;
-    keypress?: SysEventHandler;
-    click?: SysEventHandler;
-    mousedown?: SysEventHandler;
-    mouseleave?: SysEventHandler;
-    mouseup?: SysEventHandler;
-    blur?: SysEventHandler;
-    mouseover?: SysEventHandler;
-    mousewheel?: SysEventHandler;
-    compositionstart?: SysEventHandler;
-    compositionend?: SysEventHandler;
-    input?: SysEventHandler;
-    drag?: SysEventHandler;
-    dragsart?: SysEventHandler;
-    drop?: SysEventHandler;
+type SysEventsHandler = {
+    keydown?: (event: KeyboardEvent, docState: AditorDocState, docView: AditorDocView) => void;
+    keyup?: (event: KeyboardEvent, docState: AditorDocState, docView: AditorDocView) => void;
+    keypress?: (event: KeyboardEvent, docState: AditorDocState, docView: AditorDocView) => void;
+    click?: (event: MouseEvent, docState: AditorDocState, docView: AditorDocView) => void;
+    mousedown?: (event: MouseEvent, docState: AditorDocState, docView: AditorDocView) => void;
+    mouseleave?: (event: MouseEvent, docState: AditorDocState, docView: AditorDocView) => void;
+    mouseup?: (event: MouseEvent, docState: AditorDocState, docView: AditorDocView) => void;
+    blur?: (event: FocusEvent, docState: AditorDocState, docView: AditorDocView) => void;
+    mouseover?: (event: MouseEvent, docState: AditorDocState, docView: AditorDocView) => void;
+    mousewheel?: (event: WheelEvent, docState: AditorDocState, docView: AditorDocView) => void;
+    compositionstart?: (event: CompositionEvent, docState: AditorDocState, docView: AditorDocView) => void;
+    compositionend?: (event: CompositionEvent, docState: AditorDocState, docView: AditorDocView) => void;
+    input?: (event: InputEvent, docState: AditorDocState, docView: AditorDocView) => void;
+    drag?: (event: DragEvent, docState: AditorDocState, docView: AditorDocView) => void;
+    dragsart?: (event: DragEvent, docState: AditorDocState, docView: AditorDocView) => void;
+    drop?: (event: DragEvent, docState: AditorDocState, docView: AditorDocView) => void;
 }
 
-enum SysEventEnum {
+enum SysEventsEnum {
     keydown = 'keydown',
     keyup = 'keyup',
     keypress = 'keypress',
@@ -39,13 +39,18 @@ enum SysEventEnum {
     input = 'input',
     drag = 'drag',
     dragsart = 'dragsart',
-    drop = 'drop'
+    drop = 'drop',
 }
 
-function genSysInputEventHandlers(): SysEventInterface {
-    let sysEventHandlers: SysEventInterface = {};
-    for (let key in SysEventEnum) {
-        sysEventHandlers[key as SysInputEventKey] = () => {};
+enum ViewEventEnum {
+    DELETE_SELECTIONS = 'deleteSelections',
+    INSERT_TEXT = 'insertText',
+}
+
+function genSysInputEventHandlers(): SysEventsHandler {
+    let sysEventHandlers: SysEventsHandler = {};
+    for (let key in SysEventsEnum) {
+        sysEventHandlers[key as SysInputEventsHandlerKey] = () => {};
     }
     return sysEventHandlers;
 }
@@ -54,24 +59,32 @@ function genSysInputEventHandlers(): SysEventInterface {
  * @description: The view of the document. non global events management. only manage the events of the document.
  */
 export class AditorDocView{
-    docState: AditorDocState;
+    docState!: AditorDocState;
+    vNode!: VNode;
 
-    docSysEventHandlers: SysEventInterface = genDefaultSysInputEventHandlers();
+    docSysEventHandlers: SysEventsHandler = genDefaultSysInputEventHandlers();
     boundDocSysEvents: Map<string, { element: HTMLElement, handler: (e: Event) => void }> = new Map();
 
-    sysEventHandlers: SysEventInterface = genSysInputEventHandlers();
+    sysEventHandlers: SysEventsHandler = genSysInputEventHandlers();
     boundSysEvents: Map<string, { element: HTMLElement, handler: (e: Event) => void }[]> = new Map();
 
-    globalSysEventsHandlers: SysEventInterface = genGlobalSysInputEventHandlers();
+    globalSysEventsHandlers: SysEventsHandler = genGlobalSysInputEventHandlers();
     boundGlobalSysEvents: Map<string, (e: Event) => void> = new Map();
 
-    constructor(docState: AditorDocState){
+    isComposing: boolean = false;
+    composingTimeout: number = -1;
+
+    constructor(){
+    }
+
+    init(docState: AditorDocState, vNode: VNode){
         this.docState = docState
+        this.vNode = vNode
     }
 
     bindGlobalSysEvent(rootElement: HTMLElement){
         for (const [name, handlers] of Object.entries(this.globalSysEventsHandlers)) {
-            const boundHandler = (e: Event) => {
+            const boundHandler = (e: any) => {
                 // Only Excute the handlers when the event target is not in the rootElement.
                 if(!rootElement.contains(e.target as Node))
                     handlers(e, this.docState, this)
@@ -93,10 +106,9 @@ export class AditorDocView{
      * @param callfuncs - An object containing callback functions for each system input event.
      */
     bindDocSysEvent(element: HTMLElement) {
-        for (const name of Object.values(SysEventEnum)) {
+        for (const name of Object.values(SysEventsEnum)) {
             if (name in this.docSysEventHandlers) {
-                this.docSysEventHandlers[name as SysInputEventKey] = this.docSysEventHandlers[name as SysInputEventKey]!;
-                const boundHandler = (e: Event) => this.docSysEventHandlers[name as SysInputEventKey]!(e, this.docState, this);
+                const boundHandler = (e:any) => this.docSysEventHandlers[name]!(e as any, this.docState, this);
                 if(name === 'mousewheel') 
                     element.addEventListener('mousewheel', boundHandler, { passive: true });
                 else 
@@ -127,7 +139,7 @@ export class AditorDocView{
      * @param hookBefore - The hook function to be executed before the default event handlers.
      * @param hookAfter - The hook function to be executed after the default event handlers.
      */
-    addDocEventHook(name:SysEventEnum, hookBefore: () => void, hookAfter: () => void) {
+    addDocEventHook(name:SysEventsEnum, hookBefore: () => void, hookAfter: () => void) {
         // TODO: Implement the logic to add the hook functions before and after the default event handlers.
     }
 
@@ -145,10 +157,10 @@ export class AditorDocView{
      * @param element - The HTML element to bind the event to.
      * @param callfuncs - An object containing callback functions for each system input event.
      */
-    bindSysEvent(element: HTMLElement, callfuncs:SysEventInterface) {
-        for (const name of Object.values(SysEventEnum)) {
+    bindSysEvent(element: HTMLElement, callfuncs:SysEventsHandler) {
+        for (const name of Object.values(SysEventsEnum)) {
             if (name in callfuncs) {
-                const boundHandler = (e: Event) => callfuncs[name as SysInputEventKey]!(e, this.docState, this);
+                const boundHandler = (e:any) => callfuncs[name]!(e as any, this.docState, this);
                 if(name === 'mousewheel') 
                     element.addEventListener('mousewheel', boundHandler, { passive: true });
                 else 
@@ -180,19 +192,95 @@ export class AditorDocView{
         }
     }
     
+    
+    /**
+     * Binds the system input event to the specified element.
+     */
+    dispatchViewEvent(e:Event, actionName: ViewEventEnum, vsels: VirtualSelection[], states: AditorDocState) {
+        console.log(vsels)
+        const copyState = states.copySelf()
+        let staySels: VirtualSelection[] = []
+
+        if(actionName === ViewEventEnum.DELETE_SELECTIONS){
+            staySels = this.deleteSelections(vsels, copyState)
+        }else if(actionName === ViewEventEnum.INSERT_TEXT){
+            if(e instanceof CompositionEvent){
+                staySels = this.insertText(e.data!, vsels, copyState)
+            }
+        }
+        const updateStaySels:VirtualSelection[] = []
+
+        staySels.forEach(sel => {
+            const findNode = copyState.findNodeByPos(sel.start)
+            if(findNode instanceof AditorLeafNode || findNode instanceof AditorChildNode){
+                updateStaySels.push({
+                    start: findNode.start,
+                    end: findNode.start,
+                    startOffset: sel.startOffset,
+                    endOffset: sel.endOffset
+                })
+            }
+        })
+        copyState.root.calPosition(-1)
+        states.root.children = copyState.root.children
+
+        nextTick(()=>setDOMSelection(this, updateStaySels))
+    }
+
+
+    deleteSelections(vsels: VirtualSelection[], states: AditorDocState):VirtualSelection[]{
+        const staySels:VirtualSelection[] = []
+        
+        for(const sel of vsels){
+            // 删除指定位置
+            states.deleteNodeByPos(sel.start + sel.startOffset, sel.end + sel.endOffset)
+            // 保留停留位置
+            staySels.push({
+                start: sel.start,
+                end: sel.start,
+                startOffset: sel.startOffset,
+                endOffset: sel.startOffset
+            })
+
+        }
+        
+        return staySels
+
+    }
+
+    insertText(text: string, vsels: VirtualSelection[], states: AditorDocState): VirtualSelection[]{
+        const staySels:VirtualSelection[] = []
+        for(const sel of vsels){
+            // 删除指定位置
+            states.insertTextByPos(text, sel.start + sel.startOffset)
+            // 保留停留位置
+            staySels.push({
+                start: sel.start,
+                end: sel.start,
+                startOffset: sel.startOffset +text.length,
+                endOffset: sel.startOffset +text.length
+            })
+
+        }
+        return staySels
+    }
 
 }
 
-function genDefaultSysInputEventHandlers(): SysEventInterface{
+function genDefaultSysInputEventHandlers(): SysEventsHandler{
     return {
-        keydown: (e: Event, docState:AditorDocState, docView:AditorDocView) => {
-
+        keydown: (e: KeyboardEvent, docState:AditorDocState, docView:AditorDocView) => {
+            e.preventDefault()
         },
-        keyup: () => {},
-        keypress: () => {},
-        click: (e: Event, docState:AditorDocState, docView:AditorDocView) => {
-            docState.sels.updateSelections()
-            console.log(docState.sels.selections)
+        keyup: (e: KeyboardEvent, docState:AditorDocState, docView:AditorDocView) => {
+            e.preventDefault()
+        },
+        keypress: (e: KeyboardEvent, docState:AditorDocState, docView:AditorDocView) => {
+            e.preventDefault()
+        },
+        click: (e: MouseEvent, docState:AditorDocState, docView:AditorDocView) => {
+            e.preventDefault()
+            // docState.sels.updateSelections()
         },
         mousedown: () => {},
         mouseleave: () => {},
@@ -201,16 +289,39 @@ function genDefaultSysInputEventHandlers(): SysEventInterface{
         blur: () => {},
         mouseover: () => {},
         mousewheel: () => {},
-        compositionstart: () => {},
-        compositionend: () => {},
-        input: () => {},
+        compositionstart: (e: CompositionEvent, docState:AditorDocState, docView:AditorDocView) => {
+            docView.isComposing = true
+            docState.sels.updateSelections()
+            collapseDOMSelection()
+            docView.dispatchViewEvent(e, ViewEventEnum.DELETE_SELECTIONS, docState.sels.selections, docState)
+        },
+        compositionend: (e: CompositionEvent, docState:AditorDocState, docView:AditorDocView) => {
+            collapseDOMSelection()
+            docView.composingTimeout = window.setTimeout(() => {
+                docView.dispatchViewEvent(e, ViewEventEnum.INSERT_TEXT, docState.sels.selections, docState)
+                docView.isComposing = false
+            }, 50)
+            e.preventDefault()
+        },
+        input: (e: InputEvent, docState:AditorDocState, docView:AditorDocView) => {
+            console.log(docView.isComposing,e.inputType)
+            if(docView.isComposing && e.inputType == 'insertText'){
+                if(docView.composingTimeout){
+                    clearTimeout(docView.composingTimeout)
+                }
+                docView.dispatchViewEvent(e, ViewEventEnum.INSERT_TEXT, docState.sels.selections, docState)
+            }
+            e.preventDefault()
+
+            
+        },
         drag: () => {},
         dragsart: () => {},
         drop: () => {}
     }
 }
 
-function genGlobalSysInputEventHandlers(): SysEventInterface{
+function genGlobalSysInputEventHandlers(): SysEventsHandler{
     return {
         click: (e: Event, docState:AditorDocState, docView:AditorDocView) => {
         },

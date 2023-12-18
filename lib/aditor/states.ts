@@ -1,9 +1,8 @@
 /**
  * This file is responsible for storing the virtual tree structure of each aditor file.
  */
-import { reactive, VNode } from 'vue'
+import { reactive } from 'vue'
 import { AditorChildNode, AditorLeafNode, ANodeType} from './nodes'
-import type {AditorDocView} from './views'
 import {VirtualSelections} from "./selection";
 
 /**
@@ -20,58 +19,41 @@ export interface docStruct{
 }
 
 /**
- * Loads a JSON object into an AditorChildNode.
- * @param json - The JSON object representing the document structure.
- * @param state - The AditorDocState object.
- * @returns The loaded AditorChildNode.
- */
-export function loadJSON2ANode(json: docStruct, state: AditorDocState): AditorChildNode{
-    const _loadJSON2ANode = (json: docStruct)=>{
-        if(json.type == ANodeType.Child){
-            const anode = new AditorChildNode(json.name, json.style, json.data, state)
-            anode.children = json.children.map(child => _loadJSON2ANode(child))
-            return anode
-        }else{
-            const anode = new AditorLeafNode(json.name, json.style, json.data, state)
-            return anode
-        }
-    }
-    const anode = _loadJSON2ANode(json)
-    anode.calPosition(-1)
-    return (anode as AditorChildNode)
-}
-
-/**
  * Represents the state of an Aditor document.
  */
 export class AditorDocState{
     root!: AditorChildNode;
-    vnode!: VNode;
-    docView!: AditorDocView;
     sels: VirtualSelections = new VirtualSelections();
 
     constructor(){
-        
     }
 
     /**
      * Initializes the AditorDocState with the specified parameters.
-     * @param anode - The root AditorChildNode.
-     * @param vnode - The VNode representing the document view.
-     * @param docView - The AditorDocView object.
+     * @param sels - VirtualSelections
      */
-    init(anode: AditorChildNode, vnode: VNode, docView: AditorDocView){
-        this.root = anode
-        this.vnode = vnode
-        this.docView = docView
+    loadSels(sels: VirtualSelections){
+        this.sels = sels
     }
 
     /**
-     * Loads a JSON object into the document structure.
+     * Loads a JSON object into an AditorChildNode.
      * @param json - The JSON object representing the document structure.
      */
-    loadJSON(json: docStruct){
-        this.root = reactive((loadJSON2ANode(json, this) as AditorChildNode))
+    loadJSON2ANode(json: docStruct) {
+        const _loadJSON2ANode = (json: docStruct) => {
+            if (json.type == ANodeType.Child) {
+                const aNode = new AditorChildNode(json.name, json.style, json.data)
+                aNode.children = json.children.map(child => _loadJSON2ANode(child))
+                return aNode
+            } else {
+                const aNode = new AditorLeafNode(json.name, json.style, json.data)
+                return aNode
+            }
+        }
+        const aNode = _loadJSON2ANode(json)
+        aNode.calPosition(-1)
+        this.root = reactive((aNode as AditorChildNode))
     }
 
     /**
@@ -79,7 +61,64 @@ export class AditorDocState{
      * @returns The JSON object representing the document structure.
      */
     toJSON(){
-        return JSON.parse(JSON.stringify(this.root))
+        const stateJson = {
+            root: JSON.parse(JSON.stringify(this.root)),
+            sels: JSON.parse(JSON.stringify(this.sels))
+        }
+        return stateJson
+    }
+
+    copySelf(){
+        const state = new AditorDocState()
+        const copyState = this.toJSON()
+        state.loadJSON2ANode(copyState.root)
+        state.loadSels(copyState.sels)
+        return state
+    }
+
+    deleteNodeByPos(start: number, end: number){
+        const _deleteNodeByPos = (aNode: AditorChildNode | AditorLeafNode, start: number, end: number): boolean=>{
+            // 如果anode的位置和传入的start和end有交集
+            if (aNode.start > end || aNode.end < start) {
+                return false
+            }else{
+                if(aNode instanceof AditorChildNode){
+                    aNode.children.forEach(child => _deleteNodeByPos(child, start, end))
+                }
+                aNode.delete(start, end)
+                return true
+            }
+            
+        }
+        return _deleteNodeByPos(this.root, start, end)
+    }
+
+    insertTextByPos(text: string, start:number){
+        const insertNode = this.findNodeByPos(start)
+        if(insertNode != null){
+            insertNode.insertText(text, start)
+        }
+    }
+
+    findNodeByPos(start:number){
+        const _findNodeByPos = (aNode: AditorChildNode | AditorLeafNode, start: number): AditorChildNode | AditorLeafNode | null=>{
+            if (aNode.start > start || aNode.end < start) {
+                return null
+            }else{
+                if(aNode instanceof AditorChildNode){
+                    for(let i in aNode.children){
+                        const child = aNode.children[i]
+                        const res = _findNodeByPos(child, start)
+                        if(res != null){
+                            return res
+                        }
+                    }
+                }
+                return aNode
+            }
+        }
+        return _findNodeByPos(this.root, start)
+
     }
 }
 

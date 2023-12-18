@@ -68,7 +68,6 @@ function nodeClickHandler(data: FilesTreeNode, node: CustomNode, tree: InstanceT
 }
 
 function setOpenedDoc(path: string) {
-    console.log("setOpenedDoc")
     if (!state.openedNodes.some((node) => node.data.path == path)) {
         const openedNode = state.elTreeRef.getNode(path) as CustomNode
         state.openedNodes.push(openedNode)
@@ -117,7 +116,7 @@ function closeOpenedDoc(path: string) {
 }
 
 export default {
-    state: readonly(state), // 使用 readonly 来防止直接修改状态
+    state, // 使用 readonly 来防止直接修改状态
     loadNode,
     nodeClickHandler,
     setOpenedDoc,

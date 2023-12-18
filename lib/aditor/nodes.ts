@@ -1,3 +1,5 @@
+import { isUndefined } from "element-plus/es/utils/types.mjs";
+
 /**
  * generate random id
  * @returns 
@@ -41,6 +43,8 @@ export abstract class ANode {
     }
 
     abstract calPosition(prevEnd: number): void;
+    abstract delete(_start:number, _end:number): void;
+    abstract insertText(_text:string, _start:number): void
     abstract length(): number;
 }
 
@@ -73,6 +77,12 @@ export class AditorChildNode extends ANode {
     deleteChildByIndex(index: number) {
         this.children.splice(index, 1);
     }
+    delete(_start:number, _end:number){
+        return true
+    }
+    insertText(_text:string, _start:number){
+        return true
+    }
     length(): number {
         return this.end-this.start
     }
@@ -87,6 +97,32 @@ export class AditorLeafNode extends ANode {
     calPosition(prevEnd: number = 0) {
         this.start = prevEnd + 1;
         this.end = this.start + this.data.text.length + 1;
+    }
+    delete(_start:number, _end:number){
+        // delete this.data.text by _start and _end
+        // first calculate offset
+        let offset = _start - this.start
+        let offsetEnd = _end - this.start
+
+        if(offset < 0){
+            offset = 0
+        }
+        if(offsetEnd > this.data.text.length){
+            offsetEnd = this.data.text.length
+        }
+        // then delete
+        this.data.text = this.data.text.slice(0, offset) + this.data.text.slice(offsetEnd)
+        
+    }
+    insertText(_text: string, _start: number): void {
+        // insert text by _start
+        // first calculate offset
+        let offset = _start - this.start
+        if(offset < 0){
+            offset = 0
+        }
+        // then insert
+        this.data.text = this.data.text.slice(0, offset) + _text + this.data.text.slice(offset)
     }
     length(): number {
         return this.end-this.start

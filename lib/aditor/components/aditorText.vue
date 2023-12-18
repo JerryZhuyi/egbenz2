@@ -1,5 +1,5 @@
 <template>
-  <span>{{ aNode.data.text }}</span>
+  <span>{{ aNode.data.text ? aNode.data.text:"&#8203;" }}</span>
 </template>
 
 <script>
@@ -12,6 +12,11 @@ export default defineComponent({
     aNode:{
       type: AditorLeafNode,
       required: true,
-  }}
+    },
+    docView:{
+      type: Object,
+      required: true,
+    }
+  }
 })
 </script>

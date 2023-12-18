@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { docStruct, renderAditorFromJSON, AditorDocState } from '@lib/aditor'
+import { docStruct, renderAditorFromJSON, AditorDocView } from '@lib/aditor'
 import { onMounted } from 'vue';
 import { PropType, watchEffect } from 'vue'
 const props = defineProps({
@@ -8,10 +8,10 @@ const props = defineProps({
     required: false
   }
 })
-let aditor:AditorDocState
+let aditorView:AditorDocView
 watchEffect(() => {
   if(props.docJson){
-    aditor = renderAditorFromJSON(props.docJson)
+    aditorView = renderAditorFromJSON(props.docJson)
   }
 });
 
@@ -21,7 +21,7 @@ onMounted(() => {
 
 <template>
   <div class="editor-main">
-    <component v-if="aditor && aditor.vnode" :is="aditor.vnode"></component>
+    <component v-if="aditorView && aditorView.vNode" :is="aditorView.vNode"></component>
   </div>
 </template>
 
