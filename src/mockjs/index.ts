@@ -68,19 +68,43 @@ function importMock() {
                 },
                 "children": [
                     {
-                        "name": "aditorText",
-                        "type": "leaf",
-                        "style": {},
-                        "data": {
-                            "text": "Hello, world!",
-                        },
-                        "children": []
-                    }, {
                         "name": "aditorParagraph",
                         "type": "child",
                         "style": {},
                         "data": {
-                            "text": "bad world",
+                            
+                        },
+                        "children": [{
+                            "name": "aditorText",
+                            "type": "leaf",
+                            "style": {},
+                            "data": {
+                                "text": "good world",
+                            },
+                            "children": []
+                        },{
+                            "name": "aditorText",
+                            "type": "leaf",
+                            "style": {},
+                            "data": {
+                                "text": " second world",
+                            },
+                            "children": []
+                        },{
+                            "name": "aditorText",
+                            "type": "leaf",
+                            "style": {},
+                            "data": {
+                                "text": " third world",
+                            },
+                            "children": []
+                        }]
+                    },{
+                        "name": "aditorParagraph",
+                        "type": "child",
+                        "style": {},
+                        "data": {
+                            
                         },
                         "children": [{
                             "name": "aditorText",

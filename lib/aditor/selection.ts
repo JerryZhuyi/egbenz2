@@ -36,7 +36,6 @@ function getCurDOMSelection() {
             vsels.push(vsel)
         }
     }
-    console.log("当前", vsels[0])
     return vsels
 }
 
@@ -149,13 +148,10 @@ function _innerGetSingleDOMSelection(domNode: Node, offset:number) {
         }
         return {id:parentHashId, offset}
     } else if(validAditorId(domId)){
-        // 
-        domNode.childNodes.forEach(childNode => {
-            console.log(childNode)
-        })
-        return {id:domId, offset:0}
+        
+        return getFixPos(domNode, domId, offset)
     } else if(validAditorId(domHashId)){
-        return {id:domHashId, offset:0}
+        return getFixPos(domNode, domHashId, offset)
     }else{
         return {id:null, offset:null}
     }
@@ -168,6 +164,22 @@ function validAditorId(id: string | undefined | null){
         if(id.startsWith("_aditor-")){
             return true
         }
+    }
+}
+
+function getFixPos(domNode: Node, domId:string | null, offset:number){
+    const childNode = domNode.childNodes[offset]
+    if(childNode && childNode.nodeType === 3){
+        return {id: domId, offset}
+    }else if(childNode && childNode.nodeType === 1){
+        const fixOffset = (childNode as Element).getAttribute("offset")
+        if(fixOffset != null && fixOffset != undefined){
+            return {id: domId, offset: parseInt(fixOffset)}
+        }else{
+            return {id: null, offset:null}
+        }
+    }else{
+        return {id: null, offset: null}
     }
 }
 
@@ -187,8 +199,8 @@ function handlerSelectionchange(){
     }
 }
 
-let hasSelectionChangeListener = false 
-if(hasSelectionChangeListener === false){
-    document.addEventListener("selectionchange", handlerSelectionchange);
-    hasSelectionChangeListener = true
-}
+// let hasSelectionChangeListener = false 
+// if(hasSelectionChangeListener === false){
+//     document.addEventListener("selectionchange", handlerSelectionchange);
+//     hasSelectionChangeListener = true
+// }

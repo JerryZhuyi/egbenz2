@@ -1,5 +1,3 @@
-import { isUndefined } from "element-plus/es/utils/types.mjs";
-
 /**
  * generate random id
  * @returns 
@@ -14,6 +12,13 @@ function uuid() {
     const timestamp = Date.now().toString()
     const random = padStart(Math.floor(Math.random() * 1000).toString(), 3, "0")
     return timestamp + random
+}
+
+export type NodeSelectionType = {
+    startNode: AditorChildNode | AditorLeafNode | null,
+    startOffset: number,
+    endNode: AditorChildNode | AditorLeafNode | null,
+    endOffset: number,
 }
 
 export enum ANodeType {
@@ -44,7 +49,7 @@ export abstract class ANode {
 
     abstract calPosition(prevEnd: number): void;
     abstract delete(_start:number, _end:number): void;
-    abstract insertText(_text:string, _start:number): void
+    abstract insertText(_text:string, _start:number): void;
     abstract length(): number;
 }
 
@@ -63,7 +68,10 @@ export class AditorChildNode extends ANode {
             const prevChildEnd = index === 0 ? this.start : this.children[index - 1].end;
             child.calPosition(prevChildEnd);
         });
-        this.end = this.children[this.children.length - 1].end+1;
+        if(this.children.length > 0)
+            this.end = this.children[this.children.length - 1].end+1;
+        else
+            this.end = this.start+1;
     }
     addChild(child: AditorChildNode | AditorLeafNode) {
         this.children.push(child);
@@ -78,6 +86,12 @@ export class AditorChildNode extends ANode {
         this.children.splice(index, 1);
     }
     delete(_start:number, _end:number){
+        // delete children by _start and _end and chlidren length <= 0
+        this.children = this.children.filter(child => {
+            if(child.start > _end || child.end < _start || child.length() > 0){
+                return true
+            }
+        })
         return true
     }
     insertText(_text:string, _start:number){
@@ -125,6 +139,6 @@ export class AditorLeafNode extends ANode {
         this.data.text = this.data.text.slice(0, offset) + _text + this.data.text.slice(offset)
     }
     length(): number {
-        return this.end-this.start
+        return this.data.text.length
     }
 }

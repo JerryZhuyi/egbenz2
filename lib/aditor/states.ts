@@ -2,7 +2,7 @@
  * This file is responsible for storing the virtual tree structure of each aditor file.
  */
 import { reactive } from 'vue'
-import { AditorChildNode, AditorLeafNode, ANodeType} from './nodes'
+import { AditorChildNode, AditorLeafNode, ANodeType, NodeSelectionType } from './nodes'
 import {VirtualSelections} from "./selection";
 
 /**
@@ -120,5 +120,28 @@ export class AditorDocState{
         return _findNodeByPos(this.root, start)
 
     }
+
+    deleteEmptyNode(start: number, end:number, staySels: NodeSelectionType[]){
+        const _deleteEmptyNode = (aNode: AditorChildNode | AditorLeafNode, start: number, end: number, staySels: NodeSelectionType[]): boolean=>{
+            // 如果anode的位置和传入的start和end有交集
+            if (aNode.start > end || aNode.end < start) {
+                return false
+            }else{
+                if(aNode instanceof AditorChildNode){
+                    aNode.children.forEach(child => _deleteEmptyNode(child, start, end, staySels))
+                }
+                if(aNode instanceof AditorLeafNode){
+                    if(aNode.data.text == ""){
+                        aNode.delete(start, end)
+                        return true
+                    }
+                }
+                return false
+            }
+            
+        }
+        return _deleteEmptyNode(this.root, start, end, staySels)
+    }
+
 }
 

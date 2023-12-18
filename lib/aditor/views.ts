@@ -1,7 +1,8 @@
 import type { AditorDocState } from "./states";
 import { collapseDOMSelection, setDOMSelection, VirtualSelection } from "./selection";
 import { VNode,nextTick } from 'vue'
-import { AditorChildNode, AditorLeafNode } from "./nodes";
+import { AditorChildNode, AditorLeafNode, NodeSelectionType } from "./nodes";
+
 type SysInputEventsHandlerKey = keyof SysEventsHandler;
 
 type SysEventsHandler = {
@@ -197,9 +198,8 @@ export class AditorDocView{
      * Binds the system input event to the specified element.
      */
     dispatchViewEvent(e:Event, actionName: ViewEventEnum, vsels: VirtualSelection[], states: AditorDocState) {
-        console.log(vsels)
         const copyState = states.copySelf()
-        let staySels: VirtualSelection[] = []
+        let staySels: NodeSelectionType[] = []
 
         if(actionName === ViewEventEnum.DELETE_SELECTIONS){
             staySels = this.deleteSelections(vsels, copyState)
@@ -208,59 +208,54 @@ export class AditorDocView{
                 staySels = this.insertText(e.data!, vsels, copyState)
             }
         }
-        const updateStaySels:VirtualSelection[] = []
 
+        const updateStaySels:VirtualSelection[] = []
+        copyState.root.calPosition(-1)
         staySels.forEach(sel => {
-            const findNode = copyState.findNodeByPos(sel.start)
-            if(findNode instanceof AditorLeafNode || findNode instanceof AditorChildNode){
+            if(sel.startNode != null && sel.endNode != null){
                 updateStaySels.push({
-                    start: findNode.start,
-                    end: findNode.start,
+                    start: sel.startNode.start,
+                    end: sel.endNode.start,
                     startOffset: sel.startOffset,
                     endOffset: sel.endOffset
                 })
             }
         })
-        copyState.root.calPosition(-1)
+        console.log(updateStaySels)
         states.root.children = copyState.root.children
-
         nextTick(()=>setDOMSelection(this, updateStaySels))
     }
 
 
-    deleteSelections(vsels: VirtualSelection[], states: AditorDocState):VirtualSelection[]{
-        const staySels:VirtualSelection[] = []
+    deleteSelections(vsels: VirtualSelection[], states: AditorDocState): NodeSelectionType[]{
+        const staySels:NodeSelectionType[] = []
         
         for(const sel of vsels){
             // 删除指定位置
             states.deleteNodeByPos(sel.start + sel.startOffset, sel.end + sel.endOffset)
             // 保留停留位置
             staySels.push({
-                start: sel.start,
-                end: sel.start,
+                startNode: states.findNodeByPos(sel.start),
+                endNode: states.findNodeByPos(sel.start),
                 startOffset: sel.startOffset,
                 endOffset: sel.startOffset
             })
-
         }
-        
         return staySels
-
     }
 
-    insertText(text: string, vsels: VirtualSelection[], states: AditorDocState): VirtualSelection[]{
-        const staySels:VirtualSelection[] = []
+    insertText(text: string, vsels: VirtualSelection[], states: AditorDocState): NodeSelectionType[]{
+        const staySels:NodeSelectionType[] = []
         for(const sel of vsels){
             // 删除指定位置
             states.insertTextByPos(text, sel.start + sel.startOffset)
             // 保留停留位置
             staySels.push({
-                start: sel.start,
-                end: sel.start,
+                startNode: states.findNodeByPos(sel.start),
+                endNode: states.findNodeByPos(sel.start),
                 startOffset: sel.startOffset +text.length,
                 endOffset: sel.startOffset +text.length
             })
-
         }
         return staySels
     }
@@ -290,10 +285,12 @@ function genDefaultSysInputEventHandlers(): SysEventsHandler{
         mouseover: () => {},
         mousewheel: () => {},
         compositionstart: (e: CompositionEvent, docState:AditorDocState, docView:AditorDocView) => {
-            docView.isComposing = true
             docState.sels.updateSelections()
             collapseDOMSelection()
-            docView.dispatchViewEvent(e, ViewEventEnum.DELETE_SELECTIONS, docState.sels.selections, docState)
+            if(docView.isComposing == false){
+                docView.isComposing = true
+                docView.dispatchViewEvent(e, ViewEventEnum.DELETE_SELECTIONS, docState.sels.selections, docState)
+            }
         },
         compositionend: (e: CompositionEvent, docState:AditorDocState, docView:AditorDocView) => {
             collapseDOMSelection()
@@ -304,7 +301,6 @@ function genDefaultSysInputEventHandlers(): SysEventsHandler{
             e.preventDefault()
         },
         input: (e: InputEvent, docState:AditorDocState, docView:AditorDocView) => {
-            console.log(docView.isComposing,e.inputType)
             if(docView.isComposing && e.inputType == 'insertText'){
                 if(docView.composingTimeout){
                     clearTimeout(docView.composingTimeout)
