@@ -86,16 +86,29 @@ export class AditorChildNode extends ANode {
         this.children.splice(index, 1);
     }
     delete(_start:number, _end:number){
-        // delete children by _start and _end and chlidren length <= 0
-        this.children = this.children.filter(child => {
-            if(child.start > _end || child.end < _start || child.length() > 0){
-                return true
-            }
-        })
+        if(this.start > _start || this.end < _end){
+            // delete children by _start and _end and chlidren length <= 0
+            this.children = this.children.filter(child => {
+                if(child.start > _end || child.end < _start || child.length() > 0){
+                    return true
+                }
+            })
+        }
         return true
     }
-    insertText(_text:string, _start:number){
-        return true
+    insertText(_text:string, _start:number): AditorChildNode | AditorLeafNode | null{
+        // 判断是否有child,没有就增加一个leaf
+        if(this.children.length === 0){
+            let leaf = new AditorLeafNode("aditorText", {}, {text: _text})
+            this.addChild(leaf)
+            return leaf
+        }else{
+            // 在第一个子节点增加文本
+            let firstChild = this.children[0]
+            firstChild.insertText(_text, _start)
+            return firstChild
+        }
+
     }
     length(): number {
         return this.end-this.start
@@ -128,7 +141,7 @@ export class AditorLeafNode extends ANode {
         this.data.text = this.data.text.slice(0, offset) + this.data.text.slice(offsetEnd)
         
     }
-    insertText(_text: string, _start: number): void {
+    insertText(_text: string, _start: number): AditorChildNode | AditorLeafNode | null {
         // insert text by _start
         // first calculate offset
         let offset = _start - this.start
@@ -137,6 +150,7 @@ export class AditorLeafNode extends ANode {
         }
         // then insert
         this.data.text = this.data.text.slice(0, offset) + _text + this.data.text.slice(offset)
+        return this
     }
     length(): number {
         return this.data.text.length

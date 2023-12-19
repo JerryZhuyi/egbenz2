@@ -93,32 +93,59 @@ export class AditorDocState{
         return _deleteNodeByPos(this.root, start, end)
     }
 
-    insertTextByPos(text: string, start:number){
+    insertTextByPos(text: string, start:number): AditorChildNode | AditorLeafNode | null{
+        console.log("在", start, "处插入", text, "文本")
         const insertNode = this.findNodeByPos(start)
         if(insertNode != null){
-            insertNode.insertText(text, start)
+            return insertNode.insertText(text, start)
         }
+        return null
     }
 
     findNodeByPos(start:number){
         const _findNodeByPos = (aNode: AditorChildNode | AditorLeafNode, start: number): AditorChildNode | AditorLeafNode | null=>{
-            if (aNode.start > start || aNode.end < start) {
-                return null
-            }else{
-                if(aNode instanceof AditorChildNode){
-                    for(let i in aNode.children){
-                        const child = aNode.children[i]
-                        const res = _findNodeByPos(child, start)
-                        if(res != null){
-                            return res
-                        }
+            if(aNode.start == start || aNode.end == start){
+                return aNode
+            }else if (aNode instanceof AditorLeafNode){
+
+                if(start >= aNode.start && start <= aNode.end){
+                    return aNode
+                }else{
+                    return null
+                }
+            }else if(aNode instanceof AditorChildNode){
+                if(aNode.start > start || aNode.end < start){
+                    return null
+                }
+                for(let i in aNode.children){
+                    const child = aNode.children[i]
+                    const res = _findNodeByPos(child, start)
+                    if(res != null){
+                        return res
                     }
                 }
-                return aNode
+                return null
+            }else{
+                return null
             }
         }
         return _findNodeByPos(this.root, start)
 
+    }
+
+    findLastNodeByNode(node: AditorChildNode | AditorLeafNode){
+        const _findLastNodeByNode = (aNode: AditorChildNode | AditorLeafNode): AditorChildNode | AditorLeafNode=>{
+            if(aNode instanceof AditorChildNode){
+                if(aNode.children.length == 0){
+                    return aNode
+                }
+                const lastChild = aNode.children[aNode.children.length-1]
+                return _findLastNodeByNode(lastChild)
+            }else{
+                return aNode
+            }
+        }
+        return _findLastNodeByNode(node)
     }
 
     deleteEmptyNode(start: number, end:number, staySels: NodeSelectionType[]){
