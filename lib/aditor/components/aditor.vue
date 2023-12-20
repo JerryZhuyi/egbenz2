@@ -41,5 +41,6 @@ export default defineComponent({
 .aditor{
   /* 取消contentediable元素的边框 */
   outline: none;
+  white-space: pre-wrap;
 }
 </style>

@@ -89,7 +89,11 @@ export class AditorChildNode extends ANode {
         if(this.start > _start || this.end < _end){
             // delete children by _start and _end and chlidren length <= 0
             this.children = this.children.filter(child => {
-                if(child.start > _end || child.end < _start || child.length() > 0){
+                if(
+                    (_start >= child.start && _start <= child.end)
+                    || child.start > _end || child.end < _start 
+                    || child.length() > 0
+                ){
                     return true
                 }
             })

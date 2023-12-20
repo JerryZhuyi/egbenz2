@@ -200,7 +200,7 @@ export class AditorDocView{
     dispatchViewEvent(e:Event, actionName: ViewEventEnum, vsels: VirtualSelection[], states: AditorDocState) {
         const copyState = states.copySelf()
         let staySels: NodeSelectionType[] = []
-        console.log(vsels[0])
+        console.log("selection ", vsels[0], "dispatch event")
 
         if(actionName === ViewEventEnum.DELETE_SELECTIONS){
             staySels = this.deleteSelections(vsels, copyState)
@@ -222,6 +222,7 @@ export class AditorDocView{
                 })
             }
         })
+        console.log("stay sels: ", updateStaySels[0])
         states.root.children = copyState.root.children
         nextTick(()=>setDOMSelection(this, updateStaySels))
     }
@@ -233,6 +234,9 @@ export class AditorDocView{
         for(const sel of vsels){
             // 删除指定位置
             states.deleteNodeByPos(sel.start + sel.startOffset, sel.end + sel.endOffset)
+
+            // 触发追加判断,是否要合并首尾选区
+            
             // 保留停留位置
             staySels.push({
                 startNode: states.findNodeByPos(sel.start),
