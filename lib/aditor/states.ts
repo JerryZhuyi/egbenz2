@@ -78,7 +78,7 @@ export class AditorDocState{
 
     deleteNodeByPos(start: number, end: number){
         const _deleteNodeByPos = (aNode: AditorChildNode | AditorLeafNode, start: number, end: number): boolean=>{
-            // 如果anode的位置和传入的start和end有交集
+            // If aNode has no intersection with start and end
             if (aNode.start > end || aNode.end < start) {
                 return false
             }else{
@@ -86,6 +86,16 @@ export class AditorDocState{
                     aNode.children.forEach(child => _deleteNodeByPos(child, start, end))
                 }
                 aNode.delete(start, end)
+                // If node is aditorChildNode, and it is empty, and it is not the start node
+                if(aNode instanceof AditorChildNode){
+                    const parentNode = this.findNodeParentNodeByPos(aNode.start) as AditorChildNode
+                    if(parentNode
+                        && aNode.length() == 0 
+                        && aNode.start != start
+                    ){
+                        parentNode.children = parentNode.children.filter(child => child.start != aNode.start)
+                    }
+                }
                 return true
             }
             
@@ -94,8 +104,8 @@ export class AditorDocState{
     }
 
     insertTextByPos(text: string, start:number): AditorChildNode | AditorLeafNode | null{
-        console.log("在", start, "处插入", text, "文本")
         const insertNode = this.findNodeByPos(start)
+        console.log("at ", insertNode?.start, " insert text")
         if(insertNode != null){
             return insertNode.insertText(text, start)
         }
@@ -146,6 +156,30 @@ export class AditorDocState{
             }
         }
         return _findLastNodeByNode(node)
+    }
+
+    findNodeParentNodeByPos(start:number): AditorChildNode | null{
+        let parentNode: null | AditorChildNode = null
+        let findDirectNode = false
+        const _findNodeParentNodeByPos = (aNode: AditorChildNode | AditorLeafNode, start: number): void =>{
+            if(aNode instanceof AditorLeafNode){
+                if(start >= aNode.start && start <= aNode.end){
+                    findDirectNode = true
+                }
+            }else if(aNode instanceof AditorChildNode){
+                for(let i in aNode.children){
+                    const child = aNode.children[i]
+                    _findNodeParentNodeByPos(child, start)
+                }
+                if(findDirectNode && parentNode == null){
+                    parentNode = aNode
+                }else if(start >= aNode.start && start <= aNode.end){
+                    findDirectNode = true
+                }
+            }            
+        }
+        _findNodeParentNodeByPos(this.root, start)
+        return parentNode
     }
 
     deleteEmptyNode(start: number, end:number, staySels: NodeSelectionType[]){

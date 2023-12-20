@@ -232,12 +232,7 @@ export class AditorDocView{
         const staySels:NodeSelectionType[] = []
         
         for(const sel of vsels){
-            // 删除指定位置
             states.deleteNodeByPos(sel.start + sel.startOffset, sel.end + sel.endOffset)
-
-            // 触发追加判断,是否要合并首尾选区
-            
-            // 保留停留位置
             staySels.push({
                 startNode: states.findNodeByPos(sel.start),
                 endNode: states.findNodeByPos(sel.start),

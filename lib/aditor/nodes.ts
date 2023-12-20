@@ -115,7 +115,8 @@ export class AditorChildNode extends ANode {
 
     }
     length(): number {
-        return this.end-this.start
+        const childLength = this.children.reduce((prev, cur) => prev + cur.length(), 0)
+        return childLength + this.children.length
     }
 }
 
