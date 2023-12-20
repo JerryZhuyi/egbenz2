@@ -86,14 +86,16 @@ export class AditorChildNode extends ANode {
         this.children.splice(index, 1);
     }
     delete(_start:number, _end:number){
-        if(this.start > _start || this.end < _end){
+        // node has no intersection with selection
+        if (this.start > _end || this.end < _start) {
+            return 
+        }else{
             // delete children by _start and _end and chlidren length <= 0
             this.children = this.children.filter(child => {
-                if(
-                    (_start >= child.start && _start <= child.end)
-                    || child.start > _end || child.end < _start 
-                    || child.length() > 0
-                ){
+                // if child has full intersection with selection, and not include _start, delete it
+                if(_start <= child.start && _end >= child.end && (_start < child.start || _start > child.end) ){
+                    return false
+                }else{
                     return true
                 }
             })
@@ -101,13 +103,13 @@ export class AditorChildNode extends ANode {
         return true
     }
     insertText(_text:string, _start:number): AditorChildNode | AditorLeafNode | null{
-        // 判断是否有child,没有就增加一个leaf
+        // if no children, insert text to this node
         if(this.children.length === 0){
             let leaf = new AditorLeafNode("aditorText", {}, {text: _text})
             this.addChild(leaf)
             return leaf
         }else{
-            // 在第一个子节点增加文本
+            // insert node at first child
             let firstChild = this.children[0]
             firstChild.insertText(_text, _start)
             return firstChild

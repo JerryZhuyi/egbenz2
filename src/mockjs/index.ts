@@ -115,6 +115,22 @@ function importMock() {
                             },
                             "children": []
                         }]
+                    },{
+                        "name": "aditorParagraph",
+                        "type": "child",
+                        "style": {},
+                        "data": {
+                            
+                        },
+                        "children": [{
+                            "name": "aditorText",
+                            "type": "leaf",
+                            "style": {},
+                            "data": {
+                                "text": "end of the world",
+                            },
+                            "children": []
+                        }]
                     }
                 ]
             }

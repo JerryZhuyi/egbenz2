@@ -77,26 +77,16 @@ export class AditorDocState{
     }
 
     deleteNodeByPos(start: number, end: number){
-        const _deleteNodeByPos = (aNode: AditorChildNode | AditorLeafNode, start: number, end: number): boolean=>{
+        const _deleteNodeByPos = (aNode: AditorChildNode | AditorLeafNode, start: number, end: number): void=>{
             // If aNode has no intersection with start and end
             if (aNode.start > end || aNode.end < start) {
-                return false
+                return 
             }else{
                 if(aNode instanceof AditorChildNode){
                     aNode.children.forEach(child => _deleteNodeByPos(child, start, end))
                 }
                 aNode.delete(start, end)
-                // If node is aditorChildNode, and it is empty, and it is not the start node
-                if(aNode instanceof AditorChildNode){
-                    const parentNode = this.findNodeParentNodeByPos(aNode.start) as AditorChildNode
-                    if(parentNode
-                        && aNode.length() == 0 
-                        && aNode.start != start
-                    ){
-                        parentNode.children = parentNode.children.filter(child => child.start != aNode.start)
-                    }
-                }
-                return true
+                return 
             }
             
         }
@@ -180,6 +170,61 @@ export class AditorDocState{
         }
         _findNodeParentNodeByPos(this.root, start)
         return parentNode
+    }
+
+    /** 
+     * Find the deepest common node of two nodes（LCA: longest common ancestor）
+     * @param _nodeA - The first node
+     * @param _nodeB - The second node
+     * @returns The deepest common node of the two nodes
+    */
+    dfsFindLCANode(_nodeA:AditorChildNode | AditorLeafNode, _nodeB:AditorChildNode | AditorLeafNode){
+        if(_nodeA == null || _nodeB == null){
+            console.warn("nodeA or nodeB is null")
+            return null
+        }
+        const pathA:(AditorChildNode | AditorLeafNode)[] = []
+        const pathB:(AditorChildNode | AditorLeafNode)[] = []
+        const _dfsFindLCANode = (_rootNode: AditorChildNode | AditorLeafNode, _targetNode:AditorChildNode | AditorLeafNode, _path:(AditorChildNode | AditorLeafNode)[])=>{
+            _path.push(_rootNode)
+            if(_targetNode.start == _rootNode.start){
+                _path.push(_rootNode)
+                return true
+            }else if(_rootNode instanceof AditorChildNode){
+                for(let i in _rootNode.children){
+                    const child = _rootNode.children[i]
+                    if(_targetNode.start >= child.start && _targetNode.start <= child.end){
+                        const result = _dfsFindLCANode(child, _targetNode, _path)
+                        if(result){
+                            return true
+                        }
+                    }
+                }
+                _path.pop()
+                return false
+            }else{
+                _path.pop()
+                return false
+            }
+        }
+        _dfsFindLCANode(this.root, _nodeA, pathA)
+        _dfsFindLCANode(this.root, _nodeB, pathB)
+        
+        //compare two path deepest common node
+        let i = 0
+        while(i < pathA.length && i < pathB.length){
+            if(pathA[i].start == pathB[i].start){
+                i++
+            }else{
+                break
+            }
+        }
+
+        if(i>0){
+            return [pathA[i-1], pathA[i], pathB[i]]
+        }else{
+            return null
+        }
     }
 
     deleteEmptyNode(start: number, end:number, staySels: NodeSelectionType[]){

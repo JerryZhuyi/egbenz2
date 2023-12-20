@@ -233,6 +233,8 @@ export class AditorDocView{
         
         for(const sel of vsels){
             states.deleteNodeByPos(sel.start + sel.startOffset, sel.end + sel.endOffset)
+            const LCANode = states.dfsFindLCANode(states.findNodeByPos(sel.start)!, states.findNodeByPos(sel.end)!)
+            LCANode?.forEach(n => console.log(n?.start))
             staySels.push({
                 startNode: states.findNodeByPos(sel.start),
                 endNode: states.findNodeByPos(sel.start),
