@@ -1,9 +1,9 @@
 /**
  * This file is responsible for storing the virtual tree structure of each aditor file.
  */
-import { reactive } from 'vue'
+import { reactive, toRaw } from 'vue'
 import { AditorChildNode, AditorLeafNode, ANodeType, NodeSelectionType } from './nodes'
-import {VirtualSelections} from "./selection";
+import {VirtualSelections, VirtualSelection} from "./selection";
 
 /**
  * Represents the structure of a document.
@@ -72,8 +72,29 @@ export class AditorDocState{
         const state = new AditorDocState()
         const copyState = this.toJSON()
         state.loadJSON2ANode(copyState.root)
+        state.root = toRaw(state.root)
         state.loadSels(copyState.sels)
         return state
+    }
+
+    copySels(vsels: VirtualSelection[]){
+        const nodeSels:NodeSelectionType[] = []
+        for(let vsel of vsels){
+            const { start, end } = vsel
+            const startNode = this.findNodeByPos(start)
+            const endNode = this.findNodeByPos(end)
+            if(startNode != null && endNode != null){
+                nodeSels.push({
+                    startNode: startNode,
+                    startOffset: vsel.startOffset,
+                    endNode: endNode,
+                    endOffset: vsel.endOffset,
+                })
+            }else{
+                console.warn("[copySels]startNode or endNode is null")
+            }
+        }
+        return nodeSels
     }
 
     deleteNodeByPos(start: number, end: number){
@@ -100,6 +121,17 @@ export class AditorDocState{
             return insertNode.insertText(text, start)
         }
         return null
+    }
+    // merge two node
+    mergeNode(nodeA: AditorChildNode | AditorLeafNode, nodeB: AditorChildNode | AditorLeafNode): void{
+        if(nodeA instanceof AditorLeafNode && nodeB instanceof AditorLeafNode){
+            console.log("merge two leaf node")
+        }else if(nodeA instanceof AditorChildNode && nodeB instanceof AditorChildNode){
+            console.log("merge two child node")
+
+        }else if(nodeA instanceof AditorChildNode && nodeB instanceof AditorLeafNode){
+            console.log("merge child node and leaf node")
+        }
     }
 
     findNodeByPos(start:number){

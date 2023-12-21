@@ -199,6 +199,7 @@ export class AditorDocView{
      */
     dispatchViewEvent(e:Event, actionName: ViewEventEnum, vsels: VirtualSelection[], states: AditorDocState) {
         const copyState = states.copySelf()
+        const vselsNode = copyState.copySels(vsels)
         let staySels: NodeSelectionType[] = []
         console.log("selection ", vsels[0], "dispatch event")
 
@@ -232,9 +233,21 @@ export class AditorDocView{
         const staySels:NodeSelectionType[] = []
         
         for(const sel of vsels){
+            const LCANode = states.dfsFindLCANode(states.findNodeByPos(sel.start+sel.startOffset)!, states.findNodeByPos(sel.end + sel.endOffset)!)
             states.deleteNodeByPos(sel.start + sel.startOffset, sel.end + sel.endOffset)
-            const LCANode = states.dfsFindLCANode(states.findNodeByPos(sel.start)!, states.findNodeByPos(sel.end)!)
-            LCANode?.forEach(n => console.log(n?.start))
+            // if LCANode exists, then merge start and end
+            // if(LCANode != null && LCANode.length >= 3){
+            //     if(LCANode[0] && LCANode[1] && LCANode[2] && LCANode[1].start != LCANode[2].start){
+            //         const parentNode = states.findNodeParentNodeByPos(LCANode[2].start)
+            //         if(parentNode && LCANode[1] instanceof AditorChildNode && LCANode[2] instanceof AditorChildNode){
+            //             LCANode[1].merge(LCANode[2] as AditorChildNode)
+            //             parentNode.children = parentNode.children.filter(node => node.id != LCANode[2].id)
+            //         }else{
+            //             console.warn("try merge node,but can not find parent node")
+            //         }
+            //     }
+            // }
+
             staySels.push({
                 startNode: states.findNodeByPos(sel.start),
                 endNode: states.findNodeByPos(sel.start),

@@ -50,6 +50,7 @@ export abstract class ANode {
     abstract calPosition(prevEnd: number): void;
     abstract delete(_start:number, _end:number): void;
     abstract insertText(_text:string, _start:number): void;
+    abstract merge(node: ANode): void;
     abstract length(): number;
 }
 
@@ -116,6 +117,14 @@ export class AditorChildNode extends ANode {
         }
 
     }
+    merge(node: AditorChildNode): void {
+        if(node.name == node.name){
+            this.children = this.children.concat(node.children)
+            node.children = []
+        }else{
+            console.warn("can not merge node with different name")
+        }
+    }
     length(): number {
         const childLength = this.children.reduce((prev, cur) => prev + cur.length(), 0)
         return childLength + this.children.length
@@ -158,6 +167,9 @@ export class AditorLeafNode extends ANode {
         // then insert
         this.data.text = this.data.text.slice(0, offset) + _text + this.data.text.slice(offset)
         return this
+    }
+    merge(node: ANode): void {
+        return 
     }
     length(): number {
         return this.data.text.length
