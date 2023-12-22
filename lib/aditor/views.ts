@@ -249,7 +249,10 @@ export class AditorDocView{
             //         }
             //     }
             // }
+            states.calPosition()
+        }
 
+        for(const sel of vsels){
             staySels.push({
                 startNode: sel.startNode,
                 endNode: sel.startNode,

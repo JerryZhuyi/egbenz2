@@ -281,5 +281,8 @@ export class AditorDocState{
         return _deleteEmptyNode(this.root, start, end, staySels)
     }
 
+    calPosition(){
+        this.root.calPosition(-1)
+    }
 }
 
