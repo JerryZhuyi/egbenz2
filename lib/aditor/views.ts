@@ -204,7 +204,7 @@ export class AditorDocView{
         console.log("selection ", vsels[0], "dispatch event")
 
         if(actionName === ViewEventEnum.DELETE_SELECTIONS){
-            staySels = this.deleteSelections(vsels, copyState)
+            staySels = this.deleteSelections(vselsNode, copyState)
         }else if(actionName === ViewEventEnum.INSERT_TEXT){
             if(e instanceof CompositionEvent){
                 staySels = this.insertText(e.data!, vsels, copyState)
@@ -229,12 +229,14 @@ export class AditorDocView{
     }
 
 
-    deleteSelections(vsels: VirtualSelection[], states: AditorDocState): NodeSelectionType[]{
+    deleteSelections(vsels: NodeSelectionType[], states: AditorDocState): NodeSelectionType[]{
         const staySels:NodeSelectionType[] = []
         
         for(const sel of vsels){
-            const LCANode = states.dfsFindLCANode(states.findNodeByPos(sel.start+sel.startOffset)!, states.findNodeByPos(sel.end + sel.endOffset)!)
-            states.deleteNodeByPos(sel.start + sel.startOffset, sel.end + sel.endOffset)
+            if(sel.startNode == null || sel.endNode == null)
+                continue
+            const LCANode = states.dfsFindLCANode(sel.startNode, sel.endNode)
+            states.deleteNodeByPos(sel.startNode.start + sel.startOffset, sel.endNode.start + sel.endOffset)
             // if LCANode exists, then merge start and end
             // if(LCANode != null && LCANode.length >= 3){
             //     if(LCANode[0] && LCANode[1] && LCANode[2] && LCANode[1].start != LCANode[2].start){
@@ -249,8 +251,8 @@ export class AditorDocView{
             // }
 
             staySels.push({
-                startNode: states.findNodeByPos(sel.start),
-                endNode: states.findNodeByPos(sel.start),
+                startNode: sel.startNode,
+                endNode: sel.startNode,
                 startOffset: sel.startOffset,
                 endOffset: sel.startOffset
             })

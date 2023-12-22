@@ -139,12 +139,12 @@ function _innerGetSingleDOMSelection(domNode: Node, offset:number) {
     if (nodeType === 3 && parentNode && validAditorId(parentId)) {
         // if domNode.textContent exists \u200B, offset should be reduced by 1
         if(domNode.textContent?.includes("\u200B")){
-            offset -= 1
+            offset = offset > 0 ? offset-1 : 0
         }
         return {id:parentId, offset}
     } else if(nodeType === 3 && parentNode && validAditorId(parentHashId)){
         if(domNode.textContent?.includes("\u200B")){
-            offset -= 1
+            offset = offset > 0 ? offset-1 : 0
         }
         return {id:parentHashId, offset}
     } else if(validAditorId(domId)){
