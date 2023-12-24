@@ -51,6 +51,7 @@ export abstract class ANode {
     abstract delete(_start:number, _end:number): void;
     abstract insertText(_text:string, _start:number): void;
     abstract merge(node: ANode): void;
+    abstract split(_start:number, _end:number): void;
     abstract length(): number;
 }
 
@@ -101,11 +102,6 @@ export class AditorChildNode extends ANode {
                 }else{
                     return false
                 }
-                // if(_start <= child.start && _end >= child.end && (_start < child.start || _start > child.end) ){
-                //     return false
-                // }else{
-                //     return true
-                // }
             })
         }
         return true
@@ -130,6 +126,45 @@ export class AditorChildNode extends ANode {
             node.children = []
         }else{
             console.warn("can not merge node with different name")
+        }
+    }
+    /**
+     * split node by _start and _end
+     * Todo: can't recursive split
+     * @param _start 
+     * @param _end 
+     * @returns 
+     */
+    split(_start:number): AditorChildNode | null{
+        // then split
+        if(this.start > _start || this.end < _start)
+            return null
+
+        if(this.start === _start){
+            const copyNode = new AditorChildNode(this.name, this.style, this.data)
+            copyNode.children = this.children
+            this.children = []
+            return copyNode
+        }else{
+            // flag to indicate if split node
+            let splitFlag = false
+            const splitNodes:(AditorLeafNode | AditorChildNode)[] = []
+            this.children = this.children.filter(item =>{
+                const splitNode = item.split(_start)
+                if(splitNode){
+                    splitFlag = true
+                    splitNodes.push(splitNode)
+                    return true
+                }else if(splitFlag){
+                    splitNodes.push(item)
+                    return false
+                }else{
+                    return true
+                }
+            })
+            const splitNode = new AditorChildNode(this.name, this.style, this.data)
+            splitNode.children = splitNodes
+            return splitNode
         }
     }
     length(): number {
@@ -177,6 +212,27 @@ export class AditorLeafNode extends ANode {
     }
     merge(node: ANode): void {
         return 
+    }
+    split(_start:number): AditorLeafNode | null{
+        if(_start < this.start || _start > this.end)
+            return null
+
+        // split this.data.text by offset and end
+        // first calculate offset
+        const _end = this.start + this.length()
+        let offsetStart = _start - this.start
+        let offsetEnd = _end - this.start
+        if(offsetStart < 0){
+            offsetStart = 0
+        }
+        if(offsetEnd > this.data.text.length){
+            offsetEnd = this.data.text.length
+        }
+        // then split
+        let text = this.data.text.slice(offsetStart, offsetEnd)
+        this.data.text = this.data.text.slice(0, offsetStart) + this.data.text.slice(offsetEnd)
+
+        return new AditorLeafNode(this.name, this.style, {text})
     }
     length(): number {
         return this.data.text.length

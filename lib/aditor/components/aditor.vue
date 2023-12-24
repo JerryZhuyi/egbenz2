@@ -33,6 +33,9 @@ export default defineComponent({
       aditorRef,
       aid
     }
+  },
+  aditorConfig:{
+    type:"chidren",
   }
 })
 </script>

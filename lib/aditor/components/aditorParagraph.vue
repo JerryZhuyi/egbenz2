@@ -17,5 +17,8 @@ export default defineComponent({
       required: true,
     }
   },
+  aditorConfig:{
+    type:"chidren",
+  }
 })
 </script>

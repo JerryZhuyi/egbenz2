@@ -17,6 +17,9 @@ export default defineComponent({
       type: Object,
       required: true,
     }
+  },
+  aditorConfig:{
+    type:"leaf",
   }
 })
 </script>

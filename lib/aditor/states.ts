@@ -122,15 +122,32 @@ export class AditorDocState{
         }
         return null
     }
+
     // merge two node
     mergeNode(nodeA: AditorChildNode | AditorLeafNode, nodeB: AditorChildNode | AditorLeafNode): void{
         if(nodeA instanceof AditorLeafNode && nodeB instanceof AditorLeafNode){
-            console.log("merge two leaf node")
+            console.log("Merge two leaf node")
         }else if(nodeA instanceof AditorChildNode && nodeB instanceof AditorChildNode){
-            console.log("merge two child node")
-
+            console.log("Merge two child node")
+            if(nodeA.start != nodeB.start){
+                const parentNode = this.findNodeParentNodeByPos(nodeB.start)
+                if(parentNode == null){
+                    console.warn("Merge fail, parentNode is null")
+                    return
+                }
+                nodeA.merge(nodeB)
+                parentNode.children = parentNode.children.filter(node => node.id != nodeB.id)
+            }else{
+                console.warn("Merge fail, nodeA and nodeB has same start")
+            }
         }else if(nodeA instanceof AditorChildNode && nodeB instanceof AditorLeafNode){
-            console.log("merge child node and leaf node")
+            console.log("Merge child node and leaf node")
+        }else if(nodeA == undefined || nodeB == undefined){
+            console.warn("Can't merge undefined node")
+        }else if(nodeA instanceof AditorLeafNode && nodeB instanceof AditorChildNode){
+            console.warn("Can't merge AditorChildNode to AditorLeafNode")
+        }else{
+            console.warn("Merge fail, unknow situation")
         }
     }
 
@@ -182,28 +199,49 @@ export class AditorDocState{
 
     findNodeParentNodeByPos(start:number): AditorChildNode | null{
         let parentNode: null | AditorChildNode = null
-        let findDirectNode = false
-        const _findNodeParentNodeByPos = (aNode: AditorChildNode | AditorLeafNode, start: number): void =>{
+        const _findNodeParentNodeByPos = (aNode: AditorChildNode | AditorLeafNode, start: number): boolean =>{
             if(aNode instanceof AditorLeafNode){
                 if(start >= aNode.start && start <= aNode.end){
-                    findDirectNode = true
+                    return true
                 }
+                return false
             }else if(aNode instanceof AditorChildNode){
                 for(let i in aNode.children){
                     const child = aNode.children[i]
-                    _findNodeParentNodeByPos(child, start)
+                    const isFind = _findNodeParentNodeByPos(child, start)
+                    if(isFind && parentNode == null){
+                        parentNode = aNode
+                        return true
+                    }else if(isFind){
+                        return true
+                    }
                 }
-                if(findDirectNode && parentNode == null){
-                    parentNode = aNode
-                }else if(start >= aNode.start && start <= aNode.end){
-                    findDirectNode = true
+                if(start >= aNode.start && start <= aNode.end){
+                    return true
+                }else{
+                    return false
                 }
-            }            
+            }
+            return false
         }
         _findNodeParentNodeByPos(this.root, start)
         return parentNode
     }
 
+    findDeepestLeftNodeByNode(node: AditorChildNode | AditorLeafNode){
+        const _findDeepestLeftNodeByNode = (aNode: AditorChildNode | AditorLeafNode): AditorChildNode | AditorLeafNode=>{
+            if(aNode instanceof AditorChildNode){
+                if(aNode.children.length == 0){
+                    return aNode
+                }
+                const firstChild = aNode.children[0]
+                return _findDeepestLeftNodeByNode(firstChild)
+            }else{
+                return aNode
+            }
+        }
+        return _findDeepestLeftNodeByNode(node)
+    }
     /** 
      * Find the deepest common node of two nodes（LCA: longest common ancestor）
      * @param _nodeA - The first node

@@ -1,4 +1,5 @@
 import { AditorDocView } from "./views"
+import {NodeSelectionType} from "./nodes"
 
 export type VirtualSelection = {
     start: number
@@ -14,6 +15,23 @@ export class VirtualSelections{
     updateSelections(){
         this.lastSelections = this.selections
         this.selections = getCurDOMSelection()
+    }
+    setSelectionsByNodeSelection(nodesSelection: NodeSelectionType[]){
+        this.lastSelections = this.selections
+        this.selections = []
+        nodesSelection.forEach(nodeSelection => {
+            if(nodeSelection.startNode == null || nodeSelection.endNode == null){
+                return
+            }
+
+            const vsel:VirtualSelection = {
+                start: nodeSelection.startNode.start,
+                startOffset: nodeSelection.startOffset,
+                end: nodeSelection.endNode.start,
+                endOffset: nodeSelection.endOffset
+            }
+            this.selections.push(vsel)
+        })
     }
 }
 
