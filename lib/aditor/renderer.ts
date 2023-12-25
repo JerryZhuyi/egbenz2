@@ -77,11 +77,19 @@ export function str2AditorDocJson(htmlString: string) {
   console.log(aditorDoc)
 }
 
+
+// //////////////////////////////////////////////// //
+// //////////////////////////////////////////////// //
+// Below is a simple parser achieve by StateMechine //
+// Todo: Move to an independent unit                // 
+// //////////////////////////////////////////////// //
+// //////////////////////////////////////////////// //
+
 /**
  * use StateMechine to parse HTMLDom to AditorDocJson
  * @param node 
  */
-function parseHTMLDom2AditorDocJson(node: NodeListOf<ChildNode>):docStruct {
+function parseHTMLDom2AditorDocJson(node: NodeListOf<ChildNode>): docStruct {
   const state = new StateMechine()
   state.parse(node)
   return {
@@ -89,39 +97,69 @@ function parseHTMLDom2AditorDocJson(node: NodeListOf<ChildNode>):docStruct {
     type: ANodeType.Child,
     children: [],
     style: {},
-    data:{}
+    data: {}
   }
 }
 
-enum PARSE_STATE{
-  init="init",
+enum PARSE_STATE {
+  Start = "Start",
+  Paragraph = "Paragraph",
+  Text = "Text",
+  End = "End",
 }
 
-
-
-class StateMechine{
-  state: string
+class StateMechine {
+  state: PARSE_STATE = PARSE_STATE.Start
   pathStack: string[] = []
-  pathStyleStack: string[] = []
-  pos: number = 0
-  constructor(){
-    this.state = "init"
+  pathStyleStack: any[] = []
+  pos: number = -1
+
+  constructor() {
   }
-  parse(node: NodeListOf<ChildNode>){
-    for(let i in node){
+  private transition(el: HTMLElement) {
+    this.next(el)
+    switch (this.state) {
+      case PARSE_STATE.Start:
+        break;
+      case PARSE_STATE.Paragraph:
+        break;
+      case PARSE_STATE.Text:
+        break;
+      case PARSE_STATE.End:
+        break;
+      default:
+        break;
+    }
+    console.log(this.pathStack)
+  }
+  parse(node: NodeListOf<ChildNode>) {
+    for (let i = 0; i < node.length; i++) {
       const child = node[i] as HTMLElement
-      if(child?.childNodes?.length>0){
-        this.parse(child.childNodes)
-      }
-      console.log(child.tagName)
+      this.transition(child)
     }
   }
+  next(el: HTMLElement) {
+    this.pathStack.push(el.tagName)
+    let validKey: string[] = []
+    if(!(el.tagName in components)){
+      validKey = []
+    }else{
+      validKey = components[el.tagName].aditorConfig.styleRules
+    }
+    this.pathStyleStack.push(convertStyleString(el.getAttribute("style"), validKey) || {})
+    this.pos += 1
+  }
+
 }
 
 function convertStyleString(styleStr: string | null, validKey: string[]) {
   if (!styleStr) {
     return {};
   }
+  if(!validKey){
+    validKey = []
+  }
+
   const keyValuePairs = styleStr.split(';');
   const result: Record<string, string> = {};
 
