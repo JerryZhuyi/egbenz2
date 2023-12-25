@@ -1,12 +1,23 @@
 // dynamicRender.ts
-import { h } from 'vue'
-import { AditorChildNode, AditorLeafNode } from './nodes'
+import { h, Component } from 'vue'
+import { AditorChildNode, AditorLeafNode, ANodeType } from './nodes'
 import type { VNode } from 'vue'
-import { AditorDocState, AditorDocView } from '.'
+import { AditorDocState, AditorDocView, docStruct } from '.'
 
-export const components: { [key: string]: any } = {}
+export type AditorConfigType = {
+  type: "child" | "leaf"
+  styleRules: string[]
+}
+type AditorComponent = Component & { aditorConfig: AditorConfigType }
+
+export const components: { [key: string]: AditorComponent } = {}
 
 export function registerComponent(name: string, component: any) {
+  setComponentsDefaultConfig(component)
+  components[name] = component
+}
+
+function setComponentsDefaultConfig(component: any) {
   const defaultChildrenStyle = ['color', 'font-size', 'font-weight', 'font-family', 'text-decoration', 'background-color', 'text-align']
   const defaultLeafStyle = ['color', 'font-size', 'font-weight', 'font-family', 'text-decoration', 'background-color']
 
@@ -22,7 +33,6 @@ export function registerComponent(name: string, component: any) {
       component.aditorConfig.styleRules = defaultLeafStyle
     }
   }
-  components[name] = component
 }
 
 
@@ -53,73 +63,67 @@ export function renderComponentFromNode(aNode: AditorChildNode | AditorLeafNode,
 
 }
 
-
-
+/**
+ * Parse Str to AditorDocJson
+ * @param htmlString
+ * @returns
+ **/
 export function str2AditorDocJson(htmlString: string) {
-  var parser = new DOMParser();
-
-  // 使用DOMParser的parseFromString方法将字符串解析为DOM
-  var doc = parser.parseFromString(htmlString, 'text/html');
-  console.log(parseChildNodes(doc.body.childNodes))
-
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(htmlString, 'text/html');
+  const aditorDoc = parseHTMLDom2AditorDocJson(doc.body.childNodes)
+  console.log("Rules not complete, print detail in renderer.ts for debug")
+  console.log(doc)
+  console.log(aditorDoc)
 }
 
-function parseNode(node: Node): any {
-  if (node == null)
-    return null
-  if (node.nodeType === Node.TEXT_NODE) {
-    // 解析文本节点
-    return {
-      name: BASE_RENDER.parse_hash.span,
-      data: {
-        text: node.textContent!.trim()
+/**
+ * use StateMechine to parse HTMLDom to AditorDocJson
+ * @param node 
+ */
+function parseHTMLDom2AditorDocJson(node: NodeListOf<ChildNode>):docStruct {
+  const state = new StateMechine()
+  state.parse(node)
+  return {
+    name: "aditor",
+    type: ANodeType.Child,
+    children: [],
+    style: {},
+    data:{}
+  }
+}
+
+enum PARSE_STATE{
+  init="init",
+}
+
+
+
+class StateMechine{
+  state: string
+  pathStack: string[] = []
+  pathStyleStack: string[] = []
+  pos: number = 0
+  constructor(){
+    this.state = "init"
+  }
+  parse(node: NodeListOf<ChildNode>){
+    for(let i in node){
+      const child = node[i] as HTMLElement
+      if(child?.childNodes?.length>0){
+        this.parse(child.childNodes)
       }
-    };
-  } else if (node.nodeType === Node.ELEMENT_NODE) {
-
-    var tagName = (node as HTMLElement).tagName.toLowerCase();
-    switch (tagName) {
-      case 'div':
-        return {
-          name: BASE_RENDER.parse_hash.div,
-          children: parseChildNodes(node.childNodes),
-          style: convertStyleString((node as HTMLElement).getAttribute('style'), components[BASE_RENDER.parse_hash.div].aditorConfig.styleRules),
-          data: {}
-        };
-      case 'span':
-        return {
-          name: BASE_RENDER.parse_hash.span,
-          style: convertStyleString((node as HTMLElement).getAttribute('style'), components[BASE_RENDER.parse_hash.div].aditorConfig.styleRules),
-          data: {
-            text: node.textContent!.trim()
-          },
-        };
-      default:
-        return null;
+      console.log(child.tagName)
     }
-  } else {
-    return null;
   }
 }
 
-function parseChildNodes(childNodes: NodeListOf<ChildNode>): any {
-  var result = [];
-  for (var i = 0; i < childNodes.length; i++) {
-    var childNode = childNodes[i];
-    var parsedNode = parseNode(childNode);
-    if (parsedNode !== null) {
-      result.push(parsedNode);
-    }
-  }
-  return result;
-}
-
-function convertStyleString(styleStr: string, validKey: string[]) {
+function convertStyleString(styleStr: string | null, validKey: string[]) {
   if (!styleStr) {
     return {};
   }
   const keyValuePairs = styleStr.split(';');
-  const result = {};
+  const result: Record<string, string> = {};
 
   for (let i = 0; i < keyValuePairs.length; i++) {
     const pair = keyValuePairs[i].trim();
@@ -128,13 +132,10 @@ function convertStyleString(styleStr: string, validKey: string[]) {
       result[match[1].trim()] = match[2].trim();
     }
   }
-
   return result;
 }
 
-const BASE_RENDER = {
-  parse_hash: {
-    "div": "aditorParagraph",
-    "span": "aditorText"
-  }
+const parseHash = {
+  "div": "aditorParagraph",
+  "span": "aditorText"
 }
