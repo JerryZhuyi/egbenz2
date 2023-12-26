@@ -70,9 +70,10 @@ export function renderComponentFromNode(aNode: AditorChildNode | AditorLeafNode,
  **/
 export function str2AditorDocJson(htmlString: string) {
   const parser = new Parser()
-  parser.parse(htmlString)
   console.log("Rules not complete, print detail in renderer.ts for debug")
   console.log(htmlString)
+  const doc = parser.parse(htmlString)
+  console.log(doc)
   // console.log(aditorDoc)
 }
 
@@ -85,21 +86,28 @@ export function str2AditorDocJson(htmlString: string) {
 // //////////////////////////////////////////////// //
 
 // HTMLDOM Tokenizer Regex Spec
+// [Notice] HTMLDom is perfer to use hand write parser
+// [Notice] Not use any parser generator
 const Spec:[RegExp, string][] = [
-  [/^<!--/, "COMMENT_START"],
-  [/^-->/, "COMMENT_END"],
+  // COMMENT Skip
+  [/^<!--[\s\S]*?-->/, null],
+  // Whitespace Skip
+  [/^\s+/, null],
+
   [/^<!\[CDATA\[/, "CDATA_START"],
   [/^\]\]>/, "CDATA_END"],
-  [/^<\//, "TAG_CLOSE"],
-  [/^</, "TAG_OPEN"],
+  //TAGName but not include < and >
+  [/^<[\w\d-]+/, "TAG_NAME"],
   [/^>/, "TAG_END"],
-  [/^\s+/, "WHITESPACE"],
-  [/^[\w-]+/, "IDENTIFIER"],
+  [/^<\//, "TAG_CLOSE"],
+  
+  // identifier
+  [/^[\w\d-]+(?=[<>=])/, "IDENTIFIER"],
   [/^"([^"]*)"/, "STRING"],
   [/^'([^']*)'/, "STRING"],
   [/^=/, "EQUALS"],
   // last nothing match should be content
-  [/^[^<]+/, "IDENTIFIER"]
+  [/^[^>]+(?=<)/, "CONTENT"],
 ]
 
 class Tokenizer{
@@ -121,19 +129,92 @@ class Tokenizer{
     if(!this.hasMoreTokens()){
       return null
     }
-    const str = this._string.slice(this._cursor)
+    const str = this._string
     
-    
-    for(const [reg, type] of Spec){
-      const tokenValue = this._match(reg, str)
-      if(tokenValue === null){
-        continue
+    if(str[this._cursor] === '<'){
+      let matched = ''
+      if(str[this._cursor+1] === '/'){
+        // skip </
+        this._cursor += 2
+      }else{
+        this._cursor++
       }
-      return {type, value:tokenValue}
+
+      while(str[this._cursor] != ' ' && str[this._cursor] != '>' && str[this._cursor] != '/' && this.isEOF() == false){
+        matched += str[this._cursor++]
+      }
+      return {type: "TAG_NAME", value: matched}
+
+    }else if(str[this._cursor] === '/'){
+      this._cursor++
+      return this.getNextToken()
+    }else if(str[this._cursor] === '>'){
+      let matched = ''
+      this._cursor++
+      if(str[this._cursor] === '<'){
+        return this.getNextToken()
+      }else if(this.isEOF() == false){
+        while(str[this._cursor] != '<' && this.isEOF() == false){
+          matched += str[this._cursor++]
+        }
+        return {type: "CONTENT", value: matched}
+      }else{
+        return {
+          type: "TAG_END",
+          value: ""
+        
+        }
+      }
+
+    }else if(str[this._cursor] === ' '){
+      let matched = ''
+      this._cursor++
+      if(str[this._cursor] === ' '){
+        return this.getNextToken()
+      }else{
+        while(str[this._cursor] != '>' && str[this._cursor] != '=' && str[this._cursor] != ' ' && str[this._cursor] != '/' && this.isEOF() == false){
+          matched += str[this._cursor++]
+        }
+        if(matched == '') 
+          return this.getNextToken()
+        return {type: "IDENTIFIER", value: matched}
+      }
+      return {type: "CONTENT", value: matched}
+
+    }else if(str[this._cursor] === '='){
+      this._cursor++
+      return {type: "EQUALS", value: "="}
+
+    }else if(str[this._cursor] === "'"){
+      let matched = ''
+      this._cursor++
+      while(str[this._cursor] != "'" && this.isEOF() == false){
+        matched += str[this._cursor++]
+      }
+      this._cursor++
+      return {type: "STRING", value: matched}
+
+    }else if(str[this._cursor] === '"'){
+      let matched = ''
+      this._cursor++
+      while(str[this._cursor] != '"' && this.isEOF() == false){
+        matched += str[this._cursor++]
+      }
+      this._cursor++
+      return {type: "STRING", value: matched}
     }
-    return null
+
+    throw new Error(`Unexpected token at ${this._cursor}`)
+
   }
-  _match(reg: RegExp, str: string){
+
+  /**
+   * Method abandon
+   * @param reg 
+   * @param str 
+   * @returns 
+   */
+  _matchRegex(reg: RegExp, str: string){
     const matched = reg.exec(str)
     if(matched == null){
       return null
@@ -148,28 +229,55 @@ class Parser{
   _tokenizer: Tokenizer
   _lookahead: {type: string, value: string} | null = {type: "", value: ""}
 
-  constructor(tokenizer: Tokenizer){
+  constructor(){
     this._tokenizer = new Tokenizer()
   }
   parse(htmlString: string){
     this._tokenizer.init(htmlString)
     // To Complete
     this._lookahead = this._tokenizer.getNextToken()
-    this.HTMLDom()
+    return this.HTML()
   }
 
   /**
-   * HTMLDom -> HTMLTag HTMLDom | ε
+   * HTML
+   * | HTMLNode HTML -> HTMLNode HTMLNode HTMLNode
    */
-  HTMLDom(){
-    let i = 0
-    while(this._tokenizer.hasMoreTokens() && i < 10000){
-      console.log(this._lookahead)
-      this._lookahead = this._tokenizer.getNextToken()
-      i++
-    }
+  HTML(){
+    return this.HTMLNodeList()
   }
 
+  HTMLNodeList(){
+    const htmlNodeList = []
+    while(!(this._lookahead == null)){
+      htmlNodeList.push(this.HTMLNode())
+    }
+    return htmlNodeList
+  }
+
+  /**
+   * HTMLNode
+   * | TAG_NAME 
+   * | TAG_NAME IDENTIFIER EQUALS STRING HTMLNode TAG_END 
+   * | TAG_NAME TAG_NAME 
+   * | TAG_NAME TAG_END CONTENT TAG_NAME TAG_CLOSE
+   */
+  HTMLNode(){
+    const token = this._lookahead
+    console.log(token)
+    this._lookahead = this._tokenizer.getNextToken()
+  }
+
+
+  _eat(type: string){
+    const token = this._lookahead
+    if(token == null){
+      throw new Error(`Unexpected end of input at ${this._tokenizer._cursor}, expect ${type}`)
+    }
+    if(type !== token.type){
+      throw new Error(`Unexpected token at ${this._tokenizer._cursor}, expect ${type} but get ${token.type}`)
+    }
+  }
 
 
 }
