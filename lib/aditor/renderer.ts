@@ -69,86 +69,108 @@ export function renderComponentFromNode(aNode: AditorChildNode | AditorLeafNode,
  * @returns
  **/
 export function str2AditorDocJson(htmlString: string) {
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(htmlString, 'text/html');
-  const aditorDoc = parseHTMLDom2AditorDocJson(doc.body.childNodes)
+  const parser = new Parser()
+  parser.parse(htmlString)
   console.log("Rules not complete, print detail in renderer.ts for debug")
-  console.log(doc)
-  console.log(aditorDoc)
+  console.log(htmlString)
+  // console.log(aditorDoc)
 }
 
 
 // //////////////////////////////////////////////// //
 // //////////////////////////////////////////////// //
-// Below is a simple parser achieve by StateMechine //
+// Below is a simple Tokenizer&Parser achieve       //
 // Todo: Move to an independent unit                // 
 // //////////////////////////////////////////////// //
 // //////////////////////////////////////////////// //
 
-/**
- * use StateMechine to parse HTMLDom to AditorDocJson
- * @param node 
- */
-function parseHTMLDom2AditorDocJson(node: NodeListOf<ChildNode>): docStruct {
-  const state = new StateMechine()
-  state.parse(node)
-  return {
-    name: "aditor",
-    type: ANodeType.Child,
-    children: [],
-    style: {},
-    data: {}
+// HTMLDOM Tokenizer Regex Spec
+const Spec:[RegExp, string][] = [
+  [/^<!--/, "COMMENT_START"],
+  [/^-->/, "COMMENT_END"],
+  [/^<!\[CDATA\[/, "CDATA_START"],
+  [/^\]\]>/, "CDATA_END"],
+  [/^<\//, "TAG_CLOSE"],
+  [/^</, "TAG_OPEN"],
+  [/^>/, "TAG_END"],
+  [/^\s+/, "WHITESPACE"],
+  [/^[\w-]+/, "IDENTIFIER"],
+  [/^"([^"]*)"/, "STRING"],
+  [/^'([^']*)'/, "STRING"],
+  [/^=/, "EQUALS"],
+  // last nothing match should be content
+  [/^[^<]+/, "IDENTIFIER"]
+]
+
+class Tokenizer{
+  _string: string = ""
+  _cursor: number = 0
+  constructor(){}
+  init(htmlString: string){
+    this._string = htmlString
+    this._cursor = 0
   }
-}
-
-enum PARSE_STATE {
-  Start = "Start",
-  Paragraph = "Paragraph",
-  Text = "Text",
-  End = "End",
-}
-
-class StateMechine {
-  state: PARSE_STATE = PARSE_STATE.Start
-  pathStack: string[] = []
-  pathStyleStack: any[] = []
-  pos: number = -1
-
-  constructor() {
+  isEOF(){
+    return this._cursor >= this._string.length
   }
-  private transition(el: HTMLElement) {
-    this.next(el)
-    switch (this.state) {
-      case PARSE_STATE.Start:
-        break;
-      case PARSE_STATE.Paragraph:
-        break;
-      case PARSE_STATE.Text:
-        break;
-      case PARSE_STATE.End:
-        break;
-      default:
-        break;
+  hasMoreTokens(){
+    return this._cursor < this._string.length
+  }
+  getNextToken():{type: string, value: string}|null{
+    // To Complete
+    if(!this.hasMoreTokens()){
+      return null
     }
-    console.log(this.pathStack)
-  }
-  parse(node: NodeListOf<ChildNode>) {
-    for (let i = 0; i < node.length; i++) {
-      const child = node[i] as HTMLElement
-      this.transition(child)
+    const str = this._string.slice(this._cursor)
+    
+    
+    for(const [reg, type] of Spec){
+      const tokenValue = this._match(reg, str)
+      if(tokenValue === null){
+        continue
+      }
+      return {type, value:tokenValue}
     }
+    return null
   }
-  next(el: HTMLElement) {
-    this.pathStack.push(el.tagName)
-    let validKey: string[] = []
-    if(!(el.tagName in components)){
-      validKey = []
+  _match(reg: RegExp, str: string){
+    const matched = reg.exec(str)
+    if(matched == null){
+      return null
     }else{
-      validKey = components[el.tagName].aditorConfig.styleRules
+      this._cursor += matched[0].length
+      return matched[0]
     }
-    this.pathStyleStack.push(convertStyleString(el.getAttribute("style"), validKey) || {})
-    this.pos += 1
   }
+}
+
+class Parser{
+  _tokenizer: Tokenizer
+  _lookahead: {type: string, value: string} | null = {type: "", value: ""}
+
+  constructor(tokenizer: Tokenizer){
+    this._tokenizer = new Tokenizer()
+  }
+  parse(htmlString: string){
+    this._tokenizer.init(htmlString)
+    // To Complete
+    this._lookahead = this._tokenizer.getNextToken()
+    this.HTMLDom()
+  }
+
+  /**
+   * HTMLDom -> HTMLTag HTMLDom | ε
+   */
+  HTMLDom(){
+    let i = 0
+    while(this._tokenizer.hasMoreTokens() && i < 10000){
+      console.log(this._lookahead)
+      this._lookahead = this._tokenizer.getNextToken()
+      i++
+    }
+  }
+
+
 
 }
 
