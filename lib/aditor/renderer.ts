@@ -241,12 +241,17 @@ class Parser{
 
   /**
    * HTML
-   * | HTMLNode HTML -> HTMLNode HTMLNode HTMLNode
+   * | HTMLNodeList
    */
   HTML(){
     return this.HTMLNodeList()
   }
 
+  /**
+   * HTMLNodeList
+   * | HTMLNode HTMLNodeList -> HTMLNode HTMLNode ... HTMLNode
+   * @returns 
+   */
   HTMLNodeList(){
     const htmlNodeList = []
     while(!(this._lookahead == null)){
@@ -257,10 +262,10 @@ class Parser{
 
   /**
    * HTMLNode
-   * | TAG_NAME 
-   * | TAG_NAME IDENTIFIER EQUALS STRING HTMLNode TAG_END 
-   * | TAG_NAME TAG_NAME 
-   * | TAG_NAME TAG_END CONTENT TAG_NAME TAG_CLOSE
+   * | SELF_CLOSING_NODE
+   * | NODE_TAG HTMLNodeList NODE_TAG
+   * | CONTENT
+   * | EMPTY
    */
   HTMLNode(){
     const token = this._lookahead
@@ -277,6 +282,10 @@ class Parser{
     if(type !== token.type){
       throw new Error(`Unexpected token at ${this._tokenizer._cursor}, expect ${type} but get ${token.type}`)
     }
+
+    this._lookahead = this._tokenizer.getNextToken()
+
+    return token
   }
 
 
