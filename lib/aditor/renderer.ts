@@ -133,17 +133,20 @@ class Tokenizer{
     
     if(str[this._cursor] === '<'){
       let matched = ''
+      let tagType = ''
       if(str[this._cursor+1] === '/'){
         // skip </
         this._cursor += 2
+        tagType = "TAG_CLOSE"
       }else{
         this._cursor++
+        tagType = "TAG_NAME"
       }
 
       while(str[this._cursor] != ' ' && str[this._cursor] != '>' && str[this._cursor] != '/' && this.isEOF() == false){
         matched += str[this._cursor++]
       }
-      return {type: "TAG_NAME", value: matched}
+      return {type: tagType, value: matched}
 
     }else if(str[this._cursor] === '/'){
       this._cursor++
@@ -160,9 +163,8 @@ class Tokenizer{
         return {type: "CONTENT", value: matched}
       }else{
         return {
-          type: "TAG_END",
+          type: "END",
           value: ""
-        
         }
       }
 
@@ -179,8 +181,6 @@ class Tokenizer{
           return this.getNextToken()
         return {type: "IDENTIFIER", value: matched}
       }
-      return {type: "CONTENT", value: matched}
-
     }else if(str[this._cursor] === '='){
       this._cursor++
       return {type: "EQUALS", value: "="}
@@ -254,7 +254,7 @@ class Parser{
    */
   HTMLNodeList(){
     const htmlNodeList = []
-    while(!(this._lookahead == null)){
+    while(!(this._lookahead == null) && this._lookahead.type != "END" && this._lookahead.type != "TAG_CLOSE"){
       htmlNodeList.push(this.HTMLNode())
     }
     return htmlNodeList
@@ -262,17 +262,108 @@ class Parser{
 
   /**
    * HTMLNode
-   * | SELF_CLOSING_NODE
-   * | NODE_TAG HTMLNodeList NODE_TAG
-   * | CONTENT
-   * | EMPTY
+   * | selfClosingNodeTag
+   * | normalNodeTag
+   * | content
    */
   HTMLNode(){
     const token = this._lookahead
-    console.log(token)
-    this._lookahead = this._tokenizer.getNextToken()
+    if(token?.type == "TAG_NAME"){
+      if(this.isSelfClosingTag(token.value)){
+        return this.selfClosingNodeTag()
+      }else{
+        return this.normalNodeTag()
+      }
+    }else if(token?.type == "CONTENT"){
+      const value = this._eat("CONTENT").value
+      return {
+        type: "content",
+        tagName: "content",
+        value
+      }
+    }
+    
+    throw new Error(`Unexpected token at ${this._tokenizer._cursor}, expect TAG_NAME or CONTENT but get ${token?.type}`)
+    
   }
 
+  /** normalNodeTag
+   * | tagName Attributes HTMLNodeList tagClose
+   * | tagName Attributes tagClose
+   */
+  normalNodeTag(){
+    const token = this._lookahead
+    if(token?.type == "TAG_NAME"){
+      const tagName = this._eat("TAG_NAME").value
+      const attributes = this.Attributes()
+      if(this._lookahead?.type == "TAG_CLOSE"){
+        this._eat("TAG_CLOSE")
+        return {
+          type: "nodeTag",
+          tagName,
+          attributes: {},
+          children: []
+        }
+      }else{
+        const children:any = this.HTMLNodeList()
+        this._eat("TAG_CLOSE")
+        return {
+          type: "nodeTag",
+          tagName,
+          attributes,
+          children
+        }
+      }
+    }else{
+      throw new Error(`Unexpected token at ${this._tokenizer._cursor}`)
+    }
+  }
+  
+
+  /** selfClosingNodeTag
+   *  | tagName Attributes
+   */
+  selfClosingNodeTag(){
+    const token = this._lookahead
+    if(token?.type == "TAG_NAME"){
+      const tagName = token.value
+      this._eat("TAG_NAME")
+      const attributes = this.Attributes()
+      return {
+        type: "selfClosingNodeTag",
+        tagName,
+        attributes
+      }
+    }else{
+      throw new Error(`Unexpected token at ${this._tokenizer._cursor}`)
+    }
+  }
+
+  /**
+   * Attributes
+   * | Identifier = String Attributes
+   * | Identifier
+   */
+  Attributes(){
+    const attributes = {}
+    while(this._lookahead?.type == "IDENTIFIER"){
+      const key = this._eat("IDENTIFIER").value
+      if(this._lookahead?.type == "EQUALS"){
+        this._eat("EQUALS")
+        const value = this._eat("STRING").value
+        attributes[key] = value
+      }else{
+        attributes[key] = true
+      }
+    }
+    return attributes
+
+  }
+  
+  isSelfClosingTag(tagName: string){
+    const selfTagList = ["br", "img", "hr", "input", "meta", "link", "base", "area", "embed", "param", "source", "track", "wbr"]
+    return selfTagList.includes(tagName)
+  }
 
   _eat(type: string){
     const token = this._lookahead
@@ -280,7 +371,7 @@ class Parser{
       throw new Error(`Unexpected end of input at ${this._tokenizer._cursor}, expect ${type}`)
     }
     if(type !== token.type){
-      throw new Error(`Unexpected token at ${this._tokenizer._cursor}, expect ${type} but get ${token.type}`)
+      throw new Error(`Unexpected token at ${this._tokenizer._cursor}, expect ${type} but get ${token.type}, value: ${token.value}`)
     }
 
     this._lookahead = this._tokenizer.getNextToken()
