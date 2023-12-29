@@ -229,6 +229,9 @@ class Parser{
   _tokenizer: Tokenizer
   _lookahead: {type: string, value: string} | null = {type: "", value: ""}
 
+  _nodeStack: any[] = []
+  _styleStack: any[] = []
+  
   constructor(){
     this._tokenizer = new Tokenizer()
   }
@@ -244,7 +247,13 @@ class Parser{
    * | HTMLNodeList
    */
   HTML(){
-    return this.HTMLNodeList()
+    this._nodeStack.push({
+      type: "root",
+      tagName: "root",
+      children: []
+    })
+    this.HTMLNodeList()
+    return this._nodeStack
   }
 
   /**
@@ -253,65 +262,80 @@ class Parser{
    * @returns 
    */
   HTMLNodeList(){
-    const htmlNodeList = []
     while(!(this._lookahead == null) && this._lookahead.type != "END" && this._lookahead.type != "TAG_CLOSE"){
-      htmlNodeList.push(this.HTMLNode())
+      this.HTMLNode()
     }
-    return htmlNodeList
   }
 
   /**
    * HTMLNode
-   * | selfClosingNodeTag
-   * | normalNodeTag
+   * | selfClosingNode
+   * | normalNode
    * | content
    */
   HTMLNode(){
     const token = this._lookahead
     if(token?.type == "TAG_NAME"){
       if(this.isSelfClosingTag(token.value)){
-        return this.selfClosingNodeTag()
+        return this.selfClosingNode()
       }else{
-        return this.normalNodeTag()
+        return this.normalNode()
       }
     }else if(token?.type == "CONTENT"){
+      const parentNode = this._currentNode()
       const value = this._eat("CONTENT").value
-      return {
+      parentNode.children.push({
         type: "content",
         tagName: "content",
         value
-      }
+      })
+      return
     }
     
     throw new Error(`Unexpected token at ${this._tokenizer._cursor}, expect TAG_NAME or CONTENT but get ${token?.type}`)
     
   }
 
-  /** normalNodeTag
+  /** normalNode
    * | tagName Attributes HTMLNodeList tagClose
    * | tagName Attributes tagClose
    */
-  normalNodeTag(){
+  normalNode(){
     const token = this._lookahead
     if(token?.type == "TAG_NAME"){
       const tagName = this._eat("TAG_NAME").value
       const attributes = this.Attributes()
       if(this._lookahead?.type == "TAG_CLOSE"){
         this._eat("TAG_CLOSE")
-        return {
-          type: "nodeTag",
-          tagName,
-          attributes: {},
-          children: []
-        }
-      }else{
-        const children:any = this.HTMLNodeList()
-        this._eat("TAG_CLOSE")
-        return {
+        this._currentNode().children.push({
           type: "nodeTag",
           tagName,
           attributes,
-          children
+          children: []
+        })
+      }else{
+        if(this._nodeStack.length >= 2){
+          const children:any = this.HTMLNodeList()
+          this._eat("TAG_CLOSE")
+          this._currentNode().children.push({
+            type: "nodeTag",
+            tagName,
+            attributes,
+            children
+          })
+        }else{
+          const parentNode = this._currentNode()
+          const newNode = {
+            type: "nodeTag",
+            tagName,
+            attributes,
+            children:[]
+          }
+          parentNode.children.push(newNode)
+          this._nodeStack.push(newNode)
+          this.HTMLNodeList()
+          this._eat("TAG_CLOSE")
+          this._nodeStack.pop()
         }
       }
     }else{
@@ -320,20 +344,24 @@ class Parser{
   }
   
 
-  /** selfClosingNodeTag
+  /** selfClosingNode
    *  | tagName Attributes
    */
-  selfClosingNodeTag(){
+  selfClosingNode(){
+    // get current nodeStack length
+    const parentNode = this._currentNode()
+
     const token = this._lookahead
     if(token?.type == "TAG_NAME"){
       const tagName = token.value
       this._eat("TAG_NAME")
-      const attributes = this.Attributes()
-      return {
-        type: "selfClosingNodeTag",
+      const styles = this._mergeStyle(this._currentStyle(), this.Attributes()["style"])
+      // inherit parent node style 
+      parentNode.children.push({
+        type: "selfClosingNode",
         tagName,
-        attributes
-      }
+        styles
+      })
     }else{
       throw new Error(`Unexpected token at ${this._tokenizer._cursor}`)
     }
@@ -345,16 +373,19 @@ class Parser{
    * | Identifier
    */
   Attributes(){
-    const attributes = {}
-    while(this._lookahead?.type == "IDENTIFIER"){
+    const attributes: {[key: string]: any} = {} // Add index signature to allow indexing with a string key
+    let nextTokenType = this._lookahead?.type 
+    while(nextTokenType == "IDENTIFIER"){
       const key = this._eat("IDENTIFIER").value
       if(this._lookahead?.type == "EQUALS"){
         this._eat("EQUALS")
         const value = this._eat("STRING").value
-        attributes[key] = value
-      }else{
-        attributes[key] = true
+        if(key === 'style'){
+          attributes[key] = convertStyleString(value, ["color", "font-size", "font-weight", "font-family", "text-decoration", "background-color", "text-align"])
+        }
       }
+      // other situation is not support;like 'embedded' identifier
+      nextTokenType = this._lookahead?.type
     }
     return attributes
 
@@ -379,6 +410,23 @@ class Parser{
     return token
   }
 
+  _currentNode(){
+    return this._nodeStack[this._nodeStack.length - 1]
+  }
+  _currentStyle(){
+    return this._styleStack[this._styleStack.length - 1]
+  }
+  
+  _mergeStyle(parentStyle:any, style: any){
+    const newStyle:{[key: string]: any} = {}
+    for(const key in parentStyle){
+      newStyle[key] = parentStyle[key]
+    }
+    for(const key in style){
+      newStyle[key] = style[key]
+    }
+    return newStyle
+  }
 
 }
 
