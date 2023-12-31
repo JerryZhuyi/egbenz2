@@ -15,7 +15,7 @@ export interface docStruct{
     data: {
         text?: string,
     },
-    children: docStruct[]
+    children?: docStruct[]
 }
 
 /**
