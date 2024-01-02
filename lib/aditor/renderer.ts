@@ -1,43 +1,11 @@
 // dynamicRender.ts
-import { h, Component } from 'vue'
-import { AditorChildNode, AditorLeafNode, ANodeType } from './nodes'
+import { h } from 'vue'
 import type { VNode } from 'vue'
-import { AditorDocState, AditorDocView, docStruct } from '.'
+import { AditorChildNode, AditorLeafNode, ANodeType } from './nodes'
+import { AditorDocView, docStruct, type AditorComponent } from '.'
 import {logger} from './log'
 
-export type AditorConfigType = {
-  type: "child" | "leaf"
-  styleRules: string[]
-}
-type AditorComponent = Component & { aditorConfig: AditorConfigType }
-
-export const components: { [key: string]: AditorComponent } = {}
-
-export function registerComponent(name: string, component: any) {
-  setComponentsDefaultConfig(component)
-  components[name] = component
-}
-
-function setComponentsDefaultConfig(component: any) {
-  const defaultChildrenStyle = ['color', 'font-size', 'font-weight', 'font-family', 'text-decoration', 'background-color', 'text-align']
-  const defaultLeafStyle = ['color', 'font-size', 'font-weight', 'font-family', 'text-decoration', 'background-color']
-
-  if (!("aditorConfig" in component)) {
-    component.aditorConfig = {
-      type: "child",
-    }
-  }
-  if (!("styleRules" in component.aditorConfig)) {
-    if (component.aditorConfig.type == "child") {
-      component.aditorConfig.styleRules = defaultChildrenStyle
-    } else {
-      component.aditorConfig.styleRules = defaultLeafStyle
-    }
-  }
-}
-
-
-export function renderComponentFromNode(aNode: AditorChildNode | AditorLeafNode, docView: AditorDocView): VNode {
+export function renderComponentFromNode(aNode: AditorChildNode | AditorLeafNode, docView: AditorDocView, components: { [key: string]: AditorComponent }): VNode {
 
   const component = components[aNode.name]
   if (!component) {
@@ -58,7 +26,7 @@ export function renderComponentFromNode(aNode: AditorChildNode | AditorLeafNode,
       docView,
       key: aNode.virtualId,
       pos: `_aditor-${aNode.start}`,
-    }, () => aNode.children.map(child => renderComponentFromNode(child, docView)))
+    }, () => aNode.children.map(child => renderComponentFromNode(child, docView, components)))
   } else {
     throw new Error(`Component must be leaf or child node`)
   }
@@ -72,7 +40,6 @@ export function renderComponentFromNode(aNode: AditorChildNode | AditorLeafNode,
  **/
 export function str2AditorDocJson(htmlString: string):docStruct[] {
   const parser = new Parser()
-  console.log(htmlString)
   const doc = parser.parse(htmlString)
   return doc
 }
@@ -421,7 +388,7 @@ class Parser{
         this._eat("EQUALS")
         const value = this._eat("STRING").value
         if(key === 'style'){
-          attributes[key] = convertStyleString(value, ["color", "font-size", "font-weight", "font-family", "text-decoration", "background-color", "text-align"])
+          attributes[key] = convertStyleString(value, SUPPORT_STYLE_KEY)
         }
       }
       // other situation is not support;like 'embedded' identifier
@@ -592,7 +559,7 @@ class Parser{
     if(currentNode == undefined){
       return 
     }
-    if(currentNode.name === "aditorParagraph"){
+    if(currentNode instanceof AditorChildNode){
       if(currentNode.children.length == 0){
         this._aditorNodeStack.pop()
       }
@@ -762,7 +729,9 @@ function htmlspecialcharsDecode(str: string) {
   return str.replace(/&quot;|&amp;|&lt;|&gt;|&nbsp;/g, (match) => replacements[match]);
 }
 
-function convertStyleString(styleStr: string | null, validKey: string[]) {
+const SUPPORT_STYLE_KEY = ["color", "font-size", "font-weight", "font-family", "text-decoration", "background-color", "text-align"]
+
+function convertStyleString(styleStr: string | null, validKey: string[] = SUPPORT_STYLE_KEY) {
   if (!styleStr) {
     return {};
   }

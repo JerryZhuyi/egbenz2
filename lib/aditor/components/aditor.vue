@@ -35,7 +35,7 @@ export default defineComponent({
     }
   },
   aditorConfig:{
-    type:"chidren",
+    class: AditorChildNode
   }
 })
 </script>

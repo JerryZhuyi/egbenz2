@@ -4,6 +4,7 @@
   
 <script>
 import { defineComponent } from 'vue'
+import { AditorChildNode, AditorLeafNode } from '@lib/aditor/nodes.ts';
 
 export default defineComponent({
   name: 'aditorParagraph',
@@ -18,7 +19,7 @@ export default defineComponent({
     }
   },
   aditorConfig:{
-    type:"chidren",
+    class: AditorChildNode
   }
 })
 </script>

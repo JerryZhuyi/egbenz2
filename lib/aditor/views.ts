@@ -1,5 +1,5 @@
 import type { AditorDocState } from "./states";
-import {loadJSON2ANode} from "./states";
+import {loadJSON2ANode, loadText2Node} from "./states";
 import { collapseDOMSelection, setDOMSelection, VirtualSelection } from "./selection";
 import { VNode,nextTick } from 'vue'
 import { AditorChildNode, AditorLeafNode, NodeSelectionType } from "./nodes";
@@ -487,25 +487,27 @@ function genDefaultSysInputEventHandlers(): SysEventsHandler{
                 docState.sels.updateSelections()
                 navigator.clipboard.read().then(clipItems => {
                     clipItems.forEach(clipItem => {
-                        clipItem.types.forEach(type => {
-                            // proirity fetch html text
-                            if(type === 'text/html'){
-                                clipItem.getType(type).then(data => {
-                                    data.text().then(htmlText => {
-                                        const result = str2AditorDocJson(htmlText)
-                                        docView.dispatchViewEvent(e, ViewEventEnum.INSERT_NODES_SELECTIONS, docState.sels.selections, docState, {nodeList: loadJSON2ANode(result)})
-                                    })
-                                })
-                            }else{
-                                clipItem.getType(type).then(
-                                    data => data.text().then(text=>{
-                                        docView.dispatchViewEvent(e, ViewEventEnum.INSERT_NODES_SELECTIONS, docState.sels.selections, docState, {nodeList: [new AditorLeafNode('aditorText', {}, {text})]})
-                                    })
-                                )
-                            }
-                        })
-                    })
-                })
+                        // Check if 'text/html' type is available
+                        const htmlType = clipItem.types.find(type => type === 'text/html');
+                        if (htmlType) {
+                            // If 'text/html' type is available, fetch it
+                            clipItem.getType(htmlType).then(data => {
+                                data.text().then(htmlText => {
+                                    const result = str2AditorDocJson(htmlText);
+                                    docView.dispatchViewEvent(e, ViewEventEnum.INSERT_NODES_SELECTIONS, docState.sels.selections, docState, {nodeList: loadJSON2ANode(result)});
+                                });
+                            });
+                        } else {
+                            // If 'text/html' type is not available, fetch the first available type
+                            clipItem.getType(clipItem.types[0]).then(data => {
+                                data.text().then(text => {
+                                    const textNodes = [loadText2Node(text)]
+                                    docView.dispatchViewEvent(e, ViewEventEnum.INSERT_NODES_SELECTIONS, docState.sels.selections, docState, {nodeList: textNodes});
+                                });
+                            });
+                        }
+                    });
+                });
                 return
             } else if (ctrlKey && e.key === 'c') { // 复制事件
                 return 

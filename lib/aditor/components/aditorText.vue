@@ -19,7 +19,7 @@ export default defineComponent({
     }
   },
   aditorConfig:{
-    type:"leaf",
+    class: AditorLeafNode
   }
 })
 </script>

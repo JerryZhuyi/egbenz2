@@ -1,4 +1,4 @@
-import { docStruct } from ".";
+import { docStruct, aNodeFactory } from ".";
 import {nanoid} from 'nanoid';
 
 /**
@@ -113,7 +113,7 @@ export class AditorChildNode extends ANode {
     insertText(_text:string, _start:number): AditorChildNode | AditorLeafNode | null{
         // if no children, insert text to this node
         if(this.children.length === 0){
-            let leaf = new AditorLeafNode("aditorText", {}, {text: _text})
+            let leaf = aNodeFactory.createAditorNode("aditorText", {}, {text: _text}) as AditorLeafNode
             this.addChild(leaf)
             return leaf
         }else{
@@ -145,10 +145,10 @@ export class AditorChildNode extends ANode {
             return null
 
         if(this.start === _start){
-            const copyNode = new AditorChildNode(this.name, this.style, this.data)
+            const copyNode = aNodeFactory.createAditorNode(this.name, this.style, this.data) as AditorChildNode
             copyNode.children = this.children
             this.children = []
-            return copyNode
+            return copyNode as AditorChildNode
         }else{
             // flag to indicate if split node
             let splitFlag = false
@@ -166,7 +166,7 @@ export class AditorChildNode extends ANode {
                     return true
                 }
             })
-            const splitNode = new AditorChildNode(this.name, this.style, this.data)
+            const splitNode = aNodeFactory.createAditorNode(this.name, this.style, this.data) as AditorChildNode
             splitNode.children = splitNodes
             return splitNode
         }
@@ -261,9 +261,25 @@ export class AditorLeafNode extends ANode {
         let text = this.data.text.slice(offsetStart, offsetEnd)
         this.data.text = this.data.text.slice(0, offsetStart) + this.data.text.slice(offsetEnd)
 
-        return new AditorLeafNode(this.name, this.style, {text})
+        return aNodeFactory.createAditorNode(this.name, this.style, {text}) as AditorLeafNode
     }
     length(): number {
         return this.data.text.length
+    }
+}
+
+export class AditorNodeFactory {
+    private nodeTypes: Map<string, new (name: string, style: {}, data: {}) => AditorChildNode | AditorLeafNode> = new Map();
+
+    public registerNode(name: string, nodeClass: new (name: string, style: {}, data: {}) => AditorChildNode | AditorLeafNode) {
+        this.nodeTypes.set(name, nodeClass);
+    }
+
+    public createAditorNode(name: string, style: {}, data: {}): AditorChildNode | AditorLeafNode {
+        const NodeClass = this.nodeTypes.get(name);
+        if (!NodeClass) {
+            throw new Error(`Invalid name: ${name}`);
+        }
+        return new NodeClass(name, style, data);
     }
 }

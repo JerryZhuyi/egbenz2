@@ -63,8 +63,6 @@ class AditorLogger {
             console.error(...args);
         }
     }
-
-    // 你可以添加更多的方法，比如 warn, error 等
 }
 
 export const logger = new AditorLogger(import.meta.env.VITE_LOGGER_LEVEL);
