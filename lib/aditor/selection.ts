@@ -54,6 +54,7 @@ function getCurDOMSelection() {
             vsels.push(vsel)
         }
     }
+
     return vsels
 }
 
@@ -87,7 +88,7 @@ export function setDOMSelection(docView: AditorDocView, vsels: VirtualSelection[
 function getNodeByPos(domId: string, pos: number){
     const parentDom = document.getElementById(domId)
 
-    const domNode = parentDom?.querySelector('[pos="_aditor-' + pos + '"]')
+    const domNode = parentDom?.querySelector('[aditorid="_aditor-' + pos + '"]')
     const childNode = domNode?.childNodes[0]
     if (childNode) {
         return childNode
@@ -103,76 +104,65 @@ function _innerGetDOMSelection(_startNode: Node, _endNode: Node, _startOffset: n
     // Comment node (nodeType=8): Represents an HTML comment <!-- comment -->.
     // Document node (nodeType=9): Represents the entire HTML document.
     // Document fragment node (nodeType=11): Represents a fragment of nodes.
+    // Text node (nodeType=3): Represents text in an element (same as nodeValue for the element).
 
-    const parseId2Num = (_strId: string)=>{
-        // _strId is in the form of `_aditor-${aNode.start}`, remove the preceding `_aditor`, get the variable content `${aNode.start}`, and convert it to an integer.
-        return parseInt(_strId.split("-")[1]);
-    }
-
-    const { id:startDomId, offset: startOffset } = _innerGetSingleDOMSelection(_startNode, _startOffset)
-    const { id:endDomId,  offset: endOffset } = _innerGetSingleDOMSelection(_endNode, _endOffset)
-    if(startDomId == null || endDomId == null || startDomId == undefined || endDomId == undefined){
+    const { start, offset: startOffset } = _innerGetSingleDOMSelection(_startNode, _startOffset)
+    const { start: end, offset: endOffset } = _innerGetSingleDOMSelection(_endNode, _endOffset)
+    if(start == null || end == null || startOffset == null || endOffset == null){
+        console.warn(`start or end is null, start: ${start}, end: ${end}, startOffset: ${startOffset}, endOffset: ${endOffset}`)
         return null
     }
     const vsel:VirtualSelection = {
-        start: parseId2Num(startDomId),
+        start,
         startOffset,
-        end: parseId2Num(endDomId),
+        end,
         endOffset
     }
     return vsel
 }
 
-function _innerGetSingleDOMSelection(domNode: Node, offset:number) {
-    const nodeType = domNode.nodeType
-    const parentNode: Node | Element | null | undefined = domNode.parentNode
+function _innerGetSingleDOMSelection(_domNode: Node, _offset:number) {
+    const nodeType = _domNode.nodeType
+    const parentNode: Node | Element | null | undefined = _domNode.parentNode
 
-    let domId:string | undefined | null = null;
-    let domHashId: string | undefined | null = null;
-    let parentId:string | undefined | null = null;
-    let parentHashId: string | undefined | null = null;
-
-    try{
-        domId = (domNode as Element)?.getAttribute("pos");
-    }catch{
-        // Handle the error here if needed
-    }
-    try{
-        domHashId = (domNode as Element)?.getAttribute("hash_pos");
-    }catch{
-        // Handle the error here if needed
-    }
-    try{
-        parentId = (parentNode as Element)?.getAttribute("pos");
-    }catch{
-        // Handle the error here if needed
-    }
-    try{
-        parentHashId = (parentNode as Element)?.getAttribute("hash_pos");
-    }catch{
-        // Handle the error here if needed
-    }
+    let start: number | null = null
+    let offset: number | null = null
     
-    // For Text nodes, we need to check if the parent node can be selected. If it doesn't have a validAditorId, return null.
-    if (nodeType === 3 && parentNode && validAditorId(parentId)) {
-        // if domNode.textContent exists \u200B, offset should be reduced by 1
-        if(domNode.textContent?.includes("\u200B")){
-            offset = offset > 0 ? offset-1 : 0
+    if(_domNode.nodeType === 3){ // Text node
+        if(parentNode != null){
+            const sel = getSelAndOffset(parentNode as Element, _offset)
+            start = sel.start
+            offset = sel.offset
+        }else{
+            console.error(`Text node ${_domNode} has no parentNode`)
         }
-        return {id:parentId, offset}
-    } else if(nodeType === 3 && parentNode && validAditorId(parentHashId)){
-        if(domNode.textContent?.includes("\u200B")){
-            offset = offset > 0 ? offset-1 : 0
-        }
-        return {id:parentHashId, offset}
-    } else if(validAditorId(domId)){
-        
-        return getFixPos(domNode, domId, offset)
-    } else if(validAditorId(domHashId)){
-        return getFixPos(domNode, domHashId, offset)
+    }else if(_domNode.nodeType === 1){ // Element node
+        const sel = getSelAndOffset(_domNode as Element, _offset)
+        start = sel.start
+        offset = sel.offset
     }else{
-        return {id:null, offset:null}
+        console.error(`Unknown nodeType ${nodeType}, node details: ${_domNode}`)
     }
+    return {start, offset}
+    // // For Text nodes, we need to check if the parent node can be selected. If it doesn't have a validAditorId, return null.
+    // if (nodeType === 3 && parentNode && validAditorId(parentId)) {
+    //     // if domNode.textContent exists \u200B, offset should be reduced by 1
+    //     if(domNode.textContent?.includes("\u200B")){
+    //         offset = offset > 0 ? offset-1 : 0
+    //     }
+    //     return {id:parentId, offset}
+    // } else if(nodeType === 3 && parentNode && validAditorId(parentHashId)){
+    //     if(domNode.textContent?.includes("\u200B")){
+    //         offset = offset > 0 ? offset-1 : 0
+    //     }
+    //     return {id:parentHashId, offset}
+    // } else if(validAditorId(domId)){
+    //     return getFixPos(domNode, domId, offset)
+    // } else if(validAditorId(domHashId)){
+    //     return getFixPos(domNode, domHashId, offset)
+    // }else{
+    //     return {id:null, offset:null}
+    // }
 }
 
 function validAditorId(id: string | undefined | null){
@@ -185,22 +175,63 @@ function validAditorId(id: string | undefined | null){
     }
 }
 
-function getFixPos(domNode: Node, domId:string | null, offset:number){
-    const childNode = domNode.childNodes[offset]
-    if(childNode && childNode.nodeType === 3){
-        return {id: domId, offset}
-    }else if(childNode && childNode.nodeType === 1){
-        const fixOffset = (childNode as Element).getAttribute("offset")
-        if(fixOffset != null && fixOffset != undefined){
-            return {id: domId, offset: parseInt(fixOffset)}
-        }else{
-            return {id: null, offset:null}
-        }
-    }else{
-        return {id: null, offset: null}
-    }
-}
+function getSelAndOffset(_domNode: Element, _offset:number){
 
+    const parseId2Num = (_strId: string)=>{
+        // _strId is in the form of `_aditor-${aNode.start}`, remove the preceding `_aditor`, get the variable content `${aNode.start}`, and convert it to an integer.
+        const _start = parseInt(_strId.split("-")[1])
+        // test if _start is not null and a number
+        if(_start != null && _start != undefined){
+            if(isNaN(_start)){
+                console.error(`aditorId not valid: ${_strId}`)
+                return null
+            }else{
+                return _start
+            }
+        }else{
+            console.error(`aditorId not valid: ${_strId}`)
+            return null
+        }
+    }
+
+    // selStart first
+    let start = null 
+    let offset = null
+    let _selOffsetCor = 0
+
+    let _selStart = _domNode.getAttribute("selstart")
+    // test if _selStart is a number
+    if(_selStart != null && _selStart != undefined){
+        if(isNaN(parseInt(_selStart))){
+            _selStart = null
+        }
+    }
+
+    if(_selStart){
+        start = parseInt(_selStart)
+    }else{ // only when _selStart is null, we try to get aditorId to calculate start
+        let _aditorId = _domNode.getAttribute("aditorid")
+        // test if _aditorId is not null 
+        if(validAditorId(_aditorId)){
+            start = parseId2Num(_aditorId!)
+        }
+    }
+
+    //get offset
+    // selOffset first
+    _selOffsetCor = _domNode.getAttribute("seloffsetcor")
+    // test if _selOffset is a number
+    if(_selOffsetCor != null && _selOffsetCor != undefined){
+        if(isNaN(parseInt(_selOffsetCor))){
+            _selOffsetCor = 0
+        }
+    }
+    // console.log(`_offset is : ${_offset}, _selOffsetCor is : ${_selOffsetCor}`)
+    offset = _offset - _selOffsetCor
+    offset = offset > 0 ? offset : 0
+
+    return {start, offset}
+}
 
 export function collapseDOMSelection() {
     const selections = window.getSelection();

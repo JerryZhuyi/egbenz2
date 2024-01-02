@@ -18,14 +18,14 @@ export function renderComponentFromNode(aNode: AditorChildNode | AditorLeafNode,
       docView,
       style: aNode.style,
       key: aNode.virtualId,
-      pos: `_aditor-${aNode.start}`,
+      aditorId: `_aditor-${aNode.start}`,
     })
   } else if (aNode instanceof AditorChildNode) {
     return h(component, {
       aNode,
       docView,
       key: aNode.virtualId,
-      pos: `_aditor-${aNode.start}`,
+      aditorId: `_aditor-${aNode.start}`,
     }, () => aNode.children.map(child => renderComponentFromNode(child, docView, components)))
   } else {
     throw new Error(`Component must be leaf or child node`)

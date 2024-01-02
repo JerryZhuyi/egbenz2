@@ -96,15 +96,25 @@ export class AditorChildNode extends ANode {
         if (this.start > _end || this.end < _start) {
             return 
         }else{
-            // delete children by _start and _end and chlidren length <= 0
             this.children = this.children.filter(child => {
-                // if child has full intersection with selection, and not include _start, delete it
+                // if child has no intersection with selection, keep it
                 if(child.start > _end || child.end < _start){
                     return true
-                }else if((_start >= child.start && _start <= child.end) || (_end >= child.start && _end <= child.end)){
+                }
+                // if selection start stay in child, keep child; if end stay in child(not include excatly equal), keep child
+                else if((_start >= child.start && _start <= child.end) || (_end > child.start && _end < child.end)){
                     return true
                 }else{
-                    return false
+                    // if end stay in child(excatly equal), keep child
+                    if(_end >= child.start && _end <= child.end){
+                        if(child.length() > 0){
+                            return true
+                        }else{
+                            return false
+                        }
+                    }else{
+                        return false
+                    }
                 }
             })
         }

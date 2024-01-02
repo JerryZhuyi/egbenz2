@@ -297,7 +297,7 @@ export class AditorDocView{
             if(sel.startNode == null || sel.endNode == null)
                 continue
             
-            // if the selection is single, delete the previous position by recursive find the previous node
+            // If is a single selection area, then search for the previous node through recursion
             if(sel.startNode.start+sel.startOffset === sel.endNode.start+sel.endOffset){
                 const _recursiveFindPrevNode = (_start: number, _startNode: AditorChildNode | AditorLeafNode):{node:AditorChildNode | AditorLeafNode, offset:number} | null=> {
                     if(_startNode == null)
@@ -544,7 +544,7 @@ function genDefaultSysInputEventHandlers(): SysEventsHandler{
         },
         click: (e: MouseEvent, docState:AditorDocState, docView:AditorDocView) => {
             e.preventDefault()
-            // docState.sels.updateSelections()
+            docState.sels.updateSelections()
         },
         mousedown: () => {},
         mouseleave: () => {},
