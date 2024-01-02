@@ -123,6 +123,36 @@ export class AditorDocState{
         return null
     }
 
+    insertNodeByPos(_node: AditorChildNode|AditorLeafNode, start:number): AditorChildNode | AditorLeafNode | null{
+        const targetNode = this.findNodeByPos(start)
+        if(targetNode == null){
+            console.error(`[insertNodeByPos]targetNode start:${start} is null`)
+            return null
+        }
+        const parentNode = targetNode ? this.findNodeParentNodeByPos(targetNode.start) : null
+        const ancestorNode = parentNode ? this.findNodeParentNodeByPos(parentNode.start) : null
+
+        const insertNode = targetNode.insertNode(_node, start)
+
+        if(insertNode == null){
+            const insertNode2 = parentNode ? parentNode.insertNode(_node, start) : null
+            if(insertNode2 == null){
+                const insertNode3 = ancestorNode ? ancestorNode.insertNode(_node, start) : null
+                if(insertNode3 == null){
+                    console.error(`[insertNodeByPos]insert node ${_node.name} failed`)
+                    return null
+                }else{
+                    return insertNode3
+                }
+            }else{
+                return insertNode2
+            }
+        }else{
+            return insertNode
+        }
+
+    }
+
     // merge two node
     mergeNode(nodeA: AditorChildNode | AditorLeafNode, nodeB: AditorChildNode | AditorLeafNode): void{
         if(nodeA instanceof AditorLeafNode && nodeB instanceof AditorLeafNode){
@@ -242,6 +272,22 @@ export class AditorDocState{
         }
         return _findDeepestLeftNodeByNode(node)
     }
+
+    findDeepestRightNodeByNode(node: AditorChildNode | AditorLeafNode){
+        const _findDeepestRightNodeByNode = (aNode: AditorChildNode | AditorLeafNode): AditorChildNode | AditorLeafNode=>{
+            if(aNode instanceof AditorChildNode){
+                if(aNode.children.length == 0){
+                    return aNode
+                }
+                const lastChild = aNode.children[aNode.children.length-1]
+                return _findDeepestRightNodeByNode(lastChild)
+            }else{
+                return aNode
+            }
+        }
+        return _findDeepestRightNodeByNode(node)
+    }
+
     /** 
      * Find the deepest common node of two nodes（LCA: longest common ancestor）
      * @param _nodeA - The first node
@@ -324,3 +370,17 @@ export class AditorDocState{
     }
 }
 
+export function loadJSON2ANode(json: docStruct[]) {
+    const _loadJSON2ANode = (json: docStruct) => {
+        if (json.type == ANodeType.Child) {
+            const aNode = new AditorChildNode(json.name, json.style, json.data)
+            aNode.children = json.children.map(child => _loadJSON2ANode(child))
+            return aNode
+        } else {
+            const aNode = new AditorLeafNode(json.name, json.style, json.data)
+            return aNode
+        }
+    }
+    const aNodes = json.map(node => _loadJSON2ANode(node))
+    return aNodes
+  }

@@ -48,6 +48,7 @@ export function renderComponentFromNode(aNode: AditorChildNode | AditorLeafNode,
     return h(component, {
       aNode,
       docView,
+      style: aNode.style,
       key: aNode.virtualId,
       pos: `_aditor-${aNode.start}`,
     })
@@ -69,15 +70,12 @@ export function renderComponentFromNode(aNode: AditorChildNode | AditorLeafNode,
  * @param htmlString
  * @returns
  **/
-export function str2AditorDocJson(htmlString: string) {
+export function str2AditorDocJson(htmlString: string):docStruct[] {
   const parser = new Parser()
-  logger.log("Rules not complete, print detail in renderer.ts for debug")
-  logger.log(htmlString)
+  console.log(htmlString)
   const doc = parser.parse(htmlString)
-  logger.log(parser._aditorNodeStack)
   return doc
 }
-
 
 // //////////////////////////////////////////////// //
 // //////////////////////////////////////////////// //
@@ -257,7 +255,8 @@ class Parser{
     this._tokenizer.init(htmlString)
     // To Complete
     this._lookahead = this._tokenizer.getNextToken()
-    return this.HTML()
+    this.HTML()
+    return this._aditorNodeStack
   }
 
   /**
@@ -391,7 +390,7 @@ class Parser{
    */
   ContentNode(){  
     const parentNode = this._currentNode()
-    const value = this._eat("CONTENT").value
+    const value = htmlspecialcharsDecode(this._eat("CONTENT").value)
     const currentNode = {
       type: "content",
       tagName: "content",
@@ -507,7 +506,9 @@ class Parser{
       if(currentNode && currentNode.children){
         currentNode.children.push(this.makeAditorDocJson(nextNode))
       }else{
-        throw new Error(`Current state ${this._aditorCurrentState().name}, take ${nextNode.tagName}; but current node is not a child node`)
+        this._aditorNodeStack.push(this.makeAditorDocJson(nextNode))
+        logger.warn(`Current state ${this._aditorCurrentState().name}, take ${nextNode.tagName}; but current node is not a child node`)
+        // throw new Error(`Current state ${this._aditorCurrentState().name}, take ${nextNode.tagName}; but current node is not a child node`)
       }
     }else{
       logger.debug(`Current state ${this._aditorCurrentState().name}, take ${nextNode.tagName}; do nothing`)
@@ -636,7 +637,7 @@ const ADIOTR_STATE_TABLE:{[key: string]: {[key:string]: ADITOR_STATE_ENUM}} = {
   },
   [ADITOR_STATE_ENUM.TEXT]: {
     [TAG_TYPE_ENUM.BREAK]: ADITOR_STATE_ENUM.PARAGRAPH,
-    [TAG_TYPE_ENUM.INLINE]: ADITOR_STATE_ENUM.PARAGRAPH,
+    [TAG_TYPE_ENUM.INLINE]: ADITOR_STATE_ENUM.TEXT,
     [TAG_TYPE_ENUM.TEXT]: ADITOR_STATE_ENUM.TEXT,
     [TAG_TYPE_ENUM.CODE]: ADITOR_STATE_ENUM.CODE,
     [TAG_TYPE_ENUM.TABLE]: ADITOR_STATE_ENUM.TABLE,
@@ -661,7 +662,7 @@ const ADIOTR_STATE_TABLE:{[key: string]: {[key:string]: ADITOR_STATE_ENUM}} = {
   [ADITOR_STATE_ENUM.OTHER]: {
     [TAG_TYPE_ENUM.BREAK]: ADITOR_STATE_ENUM.PARAGRAPH,
     [TAG_TYPE_ENUM.INLINE]: ADITOR_STATE_ENUM.PARAGRAPH,
-    [TAG_TYPE_ENUM.TEXT]: ADITOR_STATE_ENUM.TEXT,
+    [TAG_TYPE_ENUM.TEXT]: ADITOR_STATE_ENUM.PARAGRAPH,
     [TAG_TYPE_ENUM.CODE]: ADITOR_STATE_ENUM.CODE,
     [TAG_TYPE_ENUM.TABLE]: ADITOR_STATE_ENUM.TABLE,
     [TAG_TYPE_ENUM.OTHER]: ADITOR_STATE_ENUM.OTHER
@@ -708,6 +709,7 @@ const NODETAG_HASH: { [key: string]: TAG_TYPE_ENUM } = {
   'bdo': TAG_TYPE_ENUM.INLINE,
   'wbr': TAG_TYPE_ENUM.INLINE,
   'cite': TAG_TYPE_ENUM.INLINE,
+  'font': TAG_TYPE_ENUM.INLINE,
   'pre': TAG_TYPE_ENUM.CODE,
   'code': TAG_TYPE_ENUM.CODE,
   'table': TAG_TYPE_ENUM.TABLE,
@@ -755,6 +757,11 @@ const replacements: Record<string, string> = {
   '&nbsp;': ' ',
 };
 
+// escape special tag
+function htmlspecialcharsDecode(str: string) {
+  return str.replace(/&quot;|&amp;|&lt;|&gt;|&nbsp;/g, (match) => replacements[match]);
+}
+
 function convertStyleString(styleStr: string | null, validKey: string[]) {
   if (!styleStr) {
     return {};
@@ -763,7 +770,7 @@ function convertStyleString(styleStr: string | null, validKey: string[]) {
     validKey = [];
   }
 
-  const formatStr = styleStr.replace(/&(quot|amp|lt|gt|nbsp);/g, (match) => replacements[match]);
+  const formatStr = htmlspecialcharsDecode(styleStr);
   const keyValuePairs = formatStr.split(';');
   const result: Record<string, string> = {};
 

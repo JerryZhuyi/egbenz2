@@ -73,7 +73,9 @@ onMounted(() => {
 }
 
 .content-main{
+  height: calc(100vh - 61px);
   padding: 5px 15px;
+  overflow: auto;
 }
 
 </style>

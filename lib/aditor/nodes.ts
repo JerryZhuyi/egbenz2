@@ -1,3 +1,6 @@
+import { docStruct } from ".";
+import {nanoid} from 'nanoid';
+
 /**
  * generate random id
  * @returns 
@@ -10,7 +13,7 @@ function uuid() {
         return str;
     }
     const timestamp = Date.now().toString()
-    const random = padStart(Math.floor(Math.random() * 1000).toString(), 3, "0")
+    const random = padStart(Math.floor(Math.random() * 100000).toString(), 5, "0")
     return timestamp + random
 }
 
@@ -37,8 +40,8 @@ export abstract class ANode {
     data: { [key: string]: any };
 
     constructor(name: string, style:{}, data:{}) {
-        this.id = uuid();
-        this.virtualId = uuid();
+        this.id = nanoid();
+        this.virtualId = nanoid();
         this.name = name;
         this.start = 0;
         this.end = 0;
@@ -53,6 +56,7 @@ export abstract class ANode {
     abstract merge(node: ANode): void;
     abstract split(_start:number, _end:number): void;
     abstract length(): number;
+    abstract insertNode(_node: AditorChildNode|AditorLeafNode, _start:number): AditorChildNode | AditorLeafNode | null;
 }
 
 export class AditorChildNode extends ANode {
@@ -171,6 +175,28 @@ export class AditorChildNode extends ANode {
         const childLength = this.children.reduce((prev, cur) => prev + cur.length(), 0)
         return childLength + this.children.length
     }
+    insertNode(_node: AditorChildNode | AditorLeafNode, _start:number): AditorChildNode | AditorLeafNode | null{
+        // find _start node
+        const index = this.children.findIndex((child, index) => {
+            if(child.start <= _start && child.end >= _start){
+                return true
+            }else{
+                return false
+            }
+        })
+        if(this.name === 'aditorParagraph'){
+            if(_node.name === 'aditorText' && index > -1){
+                this.children.splice(index+1, 0, _node)
+                return _node
+            }
+        }else if(this.name === 'aditor'){
+            if(_node.name === 'aditorParagraph' && index > -1){
+                this.children.splice(index+1, 0, _node)
+                return _node
+            }
+        }
+        return null
+    }
 }
 
 export class AditorLeafNode extends ANode {
@@ -209,6 +235,9 @@ export class AditorLeafNode extends ANode {
         // then insert
         this.data.text = this.data.text.slice(0, offset) + _text + this.data.text.slice(offset)
         return this
+    }
+    insertNode(){
+        return null
     }
     merge(node: ANode): void {
         return 

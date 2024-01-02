@@ -1,4 +1,5 @@
 import type { AditorDocState } from "./states";
+import {loadJSON2ANode} from "./states";
 import { collapseDOMSelection, setDOMSelection, VirtualSelection } from "./selection";
 import { VNode,nextTick } from 'vue'
 import { AditorChildNode, AditorLeafNode, NodeSelectionType } from "./nodes";
@@ -50,6 +51,7 @@ enum ViewEventEnum {
     REPLCAE_SELECTIONS = 'replaceSelections',
     BACKSPACE_SELECTIONS = 'backspaceSelections',
     ENTER_SELECTIONS = 'enterSelections',
+    INSERT_NODES_SELECTIONS = 'insertNodesSelections',
 }
 
 function genSysInputEventHandlers(): SysEventsHandler {
@@ -216,6 +218,8 @@ export class AditorDocView{
             this.backspaceSelections(vselsNode, copyState)
         }else if(actionName === ViewEventEnum.ENTER_SELECTIONS){
             this.enterSelections(vselsNode, copyState)
+        }else if(actionName === ViewEventEnum.INSERT_NODES_SELECTIONS){
+            this.insertNodesSelections(vselsNode, copyState, data)
         }
 
         copyState.calPosition()
@@ -389,6 +393,71 @@ export class AditorDocView{
 
     }
 
+    insertNodesSelections(vsels: NodeSelectionType[], states: AditorDocState, data: any = {}){
+        for(const sel of vsels){
+            if(sel.startNode == null || sel.endNode == null)
+                continue
+            const LCANode = states.dfsFindLCANode(sel.startNode, sel.endNode)
+            states.deleteNodeByPos(sel.startNode.start + sel.startOffset, sel.endNode.start + sel.endOffset)
+            if(LCANode != null && LCANode.length >= 3){
+                states.mergeNode(LCANode[1], LCANode[2])
+            }
+            states.calPosition()
+            sel.endNode = sel.startNode
+            sel.endOffset = sel.startOffset
+        }
+
+        // Locate startNode's parent node
+        for(const sel of vsels){
+            if(sel.startNode == null || sel.endNode == null)
+                continue
+            const parentNode = states.findNodeParentNodeByPos(sel.startNode.start + sel.startOffset)
+            if(parentNode == null)
+                continue
+            const ancestorNode = states.findNodeParentNodeByPos(parentNode.start)
+            if(ancestorNode == null)
+                continue
+            
+            // find startNode's parent node's index
+            const parentIndex = ancestorNode.children.findIndex((node) => node.id === parentNode.id)
+            // Insert a new node
+            const splitContent = parentNode.split(sel.startNode.start+sel.startOffset)
+            if(splitContent){
+                ancestorNode.children.splice(parentIndex+1, 0, splitContent)
+                states.calPosition()
+                // Get node list from data
+                const nodeList = data.nodeList
+                for(let i=0; i<nodeList.length; i++){
+                    const node = nodeList[i]
+                    // try insert node to startNode, if fall, try insert node to parentNode, if fall, try insert node to ancestorNode
+                    const insertNode = states.insertNodeByPos(node, sel.startNode.start+sel.startOffset)
+                    states.calPosition()
+                    if(insertNode){
+                        sel.startNode = states.findDeepestRightNodeByNode(insertNode)
+                        sel.startOffset = sel.startNode.length()
+                        sel.endNode = sel.startNode
+                        sel.endOffset = sel.startOffset
+                        if(i === nodeList.length-1){
+                            // if last node type is adtiorText, execute backspace
+                            // make sure copy span element inline
+                            if(insertNode instanceof AditorLeafNode){
+                                sel.startNode = splitContent
+                                sel.startOffset = 0
+                                sel.endNode = sel.startNode
+                                sel.endOffset = sel.startOffset
+                                this.backspaceSelections(vsels, states)
+                            }
+                        }
+                    }
+                }
+            }            
+        }
+
+        
+
+
+    }
+
 }
 
 function genDefaultSysInputEventHandlers(): SysEventsHandler{
@@ -415,15 +484,24 @@ function genDefaultSysInputEventHandlers(): SysEventsHandler{
                 return
             } else if (ctrlKey && e.key === 'v') { // 粘贴事件
                 e.preventDefault()
+                docState.sels.updateSelections()
                 navigator.clipboard.read().then(clipItems => {
                     clipItems.forEach(clipItem => {
                         clipItem.types.forEach(type => {
+                            // proirity fetch html text
                             if(type === 'text/html'){
                                 clipItem.getType(type).then(data => {
                                     data.text().then(htmlText => {
-                                        str2AditorDocJson(htmlText)
+                                        const result = str2AditorDocJson(htmlText)
+                                        docView.dispatchViewEvent(e, ViewEventEnum.INSERT_NODES_SELECTIONS, docState.sels.selections, docState, {nodeList: loadJSON2ANode(result)})
                                     })
                                 })
+                            }else{
+                                clipItem.getType(type).then(
+                                    data => data.text().then(text=>{
+                                        docView.dispatchViewEvent(e, ViewEventEnum.INSERT_NODES_SELECTIONS, docState.sels.selections, docState, {nodeList: [new AditorLeafNode('aditorText', {}, {text})]})
+                                    })
+                                )
                             }
                         })
                     })
@@ -512,7 +590,6 @@ function genGlobalSysInputEventHandlers(): SysEventsHandler{
         },
     }
 }
-
 
 const KEY_CODE = {
     keyCodeAlphabet: [65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90],//字母a到zA到Z
