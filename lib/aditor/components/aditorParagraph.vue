@@ -7,6 +7,14 @@ import { defineComponent, PropType, computed } from 'vue'
 import { AditorChildNode } from '@lib/aditor/nodes.ts';
 import { AditorDocView } from '@lib/aditor/index'
 
+class AditorParagraphNode extends AditorChildNode {
+  constructor(name: string, style:{}, data:{}) {
+    super(name, style, data)
+  }
+  selfMerge(_start: number, _end: number): void {
+      
+  }
+}
 
 export default defineComponent({
   name: 'aditorParagraph',
@@ -46,7 +54,7 @@ export default defineComponent({
   },
 
   aditorConfig: {
-    class: AditorChildNode
+    class: AditorParagraphNode
   }
 })
 </script>

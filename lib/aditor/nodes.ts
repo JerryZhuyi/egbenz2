@@ -54,6 +54,15 @@ export abstract class ANode {
     abstract delete(_start:number, _end:number): void;
     abstract insertText(_text:string, _start:number): void;
     abstract merge(node: ANode): void;
+    /**The selfMerge method is a method used by Child nodes to merge all child nodes below themselves
+     * and different nodes require different SelfMerge implementations
+     * the difference between merge and selfMerge is that merge is used to merge two specific nodes
+     * and selfMerge is used to merge all child nodes below the node,and it's recursive
+     * @param _start
+     * @param _end
+     * @returns
+     */
+    abstract selfMerge(_start:number, _end:number): void;
     abstract split(_start:number, _end:number): void;
     abstract length(): number;
     abstract insertNode(_node: AditorChildNode|AditorLeafNode, _start:number): AditorChildNode | AditorLeafNode | null;
@@ -128,6 +137,10 @@ export class AditorChildNode extends ANode {
             console.warn("can not merge node with different name")
         }
     }
+    selfMerge(_start:number, _end:number): void{
+        console.log('Please implement childNode selfMerge method')
+    }
+
     /**
      * split node by _start and _end
      * Todo: can't recursive split
@@ -237,6 +250,9 @@ export class AditorLeafNode extends ANode {
     }
     merge(node: ANode): void {
         return 
+    }
+    selfMerge(_start:number, _end:number): void{
+        return
     }
     split(_start:number): AditorLeafNode | null{
         if(_start < this.start || _start > this.end)
