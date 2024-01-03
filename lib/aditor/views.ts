@@ -381,6 +381,7 @@ export class AditorDocView{
             const parentIndex = ancestorNode.children.findIndex((node) => node.id === parentNode.id)
             // Insert a new node
             const splitContent = parentNode.split(sel.startNode.start+sel.startOffset)
+
             if(splitContent instanceof AditorChildNode){
                 ancestorNode.children.splice(parentIndex+1, 0, splitContent)
                 states.calPosition()
@@ -422,6 +423,7 @@ export class AditorDocView{
             const parentIndex = ancestorNode.children.findIndex((node) => node.id === parentNode.id)
             // Insert a new node
             const splitContent = parentNode.split(sel.startNode.start+sel.startOffset)
+
             if(splitContent){
                 ancestorNode.children.splice(parentIndex+1, 0, splitContent)
                 states.calPosition()
@@ -493,15 +495,16 @@ function genDefaultSysInputEventHandlers(): SysEventsHandler{
                             // If 'text/html' type is available, fetch it
                             clipItem.getType(htmlType).then(data => {
                                 data.text().then(htmlText => {
-                                    const result = str2AditorDocJson(htmlText);
-                                    docView.dispatchViewEvent(e, ViewEventEnum.INSERT_NODES_SELECTIONS, docState.sels.selections, docState, {nodeList: loadJSON2ANode(result)});
+                                    const pasteANodeList = loadJSON2ANode(str2AditorDocJson(htmlText));
+                                    pasteANodeList.forEach(_ => _.selfMerge(0, Number.MAX_SAFE_INTEGER, []))
+                                    docView.dispatchViewEvent(e, ViewEventEnum.INSERT_NODES_SELECTIONS, docState.sels.selections, docState, {nodeList: pasteANodeList});
                                 });
                             });
                         } else {
                             // If 'text/html' type is not available, fetch the first available type
                             clipItem.getType(clipItem.types[0]).then(data => {
                                 data.text().then(text => {
-                                    const textNodes = [loadText2Node(text)]
+                                    const textNodes = loadText2Node(text)
                                     docView.dispatchViewEvent(e, ViewEventEnum.INSERT_NODES_SELECTIONS, docState.sels.selections, docState, {nodeList: textNodes});
                                 });
                             });

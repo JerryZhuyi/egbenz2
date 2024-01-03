@@ -372,7 +372,21 @@ export function loadJSON2ANode(json: docStruct[]) {
     return aNodes
 }
 
-export function loadText2Node(text: string): AditorLeafNode{
-    const node = aNodeFactory.createAditorNode("aditorText", {}, { text: text }) as AditorLeafNode
-    return node
+export function loadText2Node(text: string): (AditorChildNode | AditorLeafNode)[]{
+    // split all line breaking element(etc \r\n | \n | \r)
+    const textList = text.split(/\r\n|\n|\r/g)
+    if(textList.length >= 1){
+        // 0 element as text node, others as a aditorText node in aditorParagraph node
+        const nodes:(AditorChildNode|AditorLeafNode)[]= [aNodeFactory.createAditorNode("aditorText", {}, { text: textList[0] }) as AditorLeafNode]
+        for(let i = 1; i < textList.length; i++){
+            const node = aNodeFactory.createAditorNode("aditorParagraph", {}, {}) as AditorChildNode
+            node.children = [aNodeFactory.createAditorNode("aditorText", {}, { text: textList[i] }) as AditorLeafNode]
+            nodes.push(node)
+        }
+        return nodes
+    }else{
+        const nodes = [aNodeFactory.createAditorNode("aditorText", {}, { text: text }) as AditorLeafNode]
+        return nodes
+    }
+
 }

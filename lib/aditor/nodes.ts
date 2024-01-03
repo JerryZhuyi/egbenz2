@@ -60,12 +60,20 @@ export abstract class ANode {
      * and selfMerge is used to merge all child nodes below the node,and it's recursive
      * @param _start
      * @param _end
+     * @param vsels notice:vsels will be modified by selfMerge
      * @returns
-     */
-    abstract selfMerge(_start:number, _end:number): void;
+    */
+    abstract selfMerge(_start:number, _end:number, vsels: NodeSelectionType[]): void;
     abstract split(_start:number, _end:number): void;
     abstract length(): number;
     abstract insertNode(_node: AditorChildNode|AditorLeafNode, _start:number): AditorChildNode | AditorLeafNode | null;
+
+    /**
+     * dfsDeepestRightEnd is a method used to find the deepest right end of the node
+     * @returns number
+     * @description
+    */
+    abstract _dfsDeepestRightEnd(): number;
 }
 
 export class AditorChildNode extends ANode {
@@ -106,8 +114,9 @@ export class AditorChildNode extends ANode {
             return 
         }else{
             this.children = this.children.filter(child => {
+                // BUG: _start and _end is fixed, but child.length() will changed while delete child in loop
                 // if del's selection total include child, delete child (not use child.end because child.end include child self, maybe can change to child.end-1)
-                if(child.start > _start && (child.start+ child.length()) <= _end ){
+                if(child.start > _start && child._dfsDeepestRightEnd() <= _end){
                     return false
                 }
                 return true
@@ -137,10 +146,14 @@ export class AditorChildNode extends ANode {
             console.warn("can not merge node with different name")
         }
     }
-    selfMerge(_start:number, _end:number): void{
-        console.log('Please implement childNode selfMerge method')
+    selfMerge(_start: number, _end:number, vsels:NodeSelectionType[]){
+        if(_start > this.end || _end < this.start){
+            return
+        }
+        for(let i=0; i<this.children.length-1; i++){
+            this.children[i].selfMerge(_start, _end, vsels)
+        }
     }
-
     /**
      * split node by _start and _end
      * Todo: can't recursive split
@@ -149,7 +162,6 @@ export class AditorChildNode extends ANode {
      * @returns 
      */
     split(_start:number): AditorChildNode | null{
-        // then split
         if(this.start > _start || this.end < _start)
             return null
 
@@ -164,8 +176,13 @@ export class AditorChildNode extends ANode {
             const splitNodes:(AditorLeafNode | AditorChildNode)[] = []
             this.children = this.children.filter(item =>{
                 const splitNode = item.split(_start)
+                // when find split node, set flag to true, and push all nodes after split node to splitNodes
                 if(splitNode){
                     splitFlag = true
+                    // check if splitNode is empty, if empty, skip it
+                    if(splitNode.length() === 0){
+                        return true
+                    }
                     splitNodes.push(splitNode)
                     return true
                 }else if(splitFlag){
@@ -205,6 +222,13 @@ export class AditorChildNode extends ANode {
             }
         }
         return null
+    }
+    _dfsDeepestRightEnd(): number {
+        if(this.children.length === 0){
+            return this.end
+        }else{
+            return this.children[this.children.length-1]._dfsDeepestRightEnd()
+        }
     }
 }
 
@@ -251,8 +275,8 @@ export class AditorLeafNode extends ANode {
     merge(node: ANode): void {
         return 
     }
-    selfMerge(_start:number, _end:number): void{
-        return
+    selfMerge(_start: number, _end: number, vsels: NodeSelectionType[]): void {
+        return 
     }
     split(_start:number): AditorLeafNode | null{
         if(_start < this.start || _start > this.end)
@@ -277,6 +301,9 @@ export class AditorLeafNode extends ANode {
     }
     length(): number {
         return this.data.text.length
+    }
+    _dfsDeepestRightEnd(): number {
+        return this.end
     }
 }
 
