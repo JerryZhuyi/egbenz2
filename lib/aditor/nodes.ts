@@ -69,11 +69,18 @@ export abstract class ANode {
     abstract insertNode(_node: AditorChildNode|AditorLeafNode, _start:number): AditorChildNode | AditorLeafNode | null;
 
     /**
+     * _isEmpty is a method used to check if the node is empty
+     */
+    abstract _isEmpty(): boolean;
+    /**
      * dfsDeepestRightEnd is a method used to find the deepest right end of the node
      * @returns number
      * @description
     */
     abstract _dfsDeepestRightEnd(): number;
+    abstract _dfsDeepestRightEndNode(): AditorChildNode | AditorLeafNode;
+    abstract _dfsDeepestLeftStart(): number;
+    abstract _dfsDeepestLeftStartNode(): AditorChildNode | AditorLeafNode;
 }
 
 export class AditorChildNode extends ANode {
@@ -115,8 +122,9 @@ export class AditorChildNode extends ANode {
         }else{
             this.children = this.children.filter(child => {
                 // BUG: _start and _end is fixed, but child.length() will changed while delete child in loop
-                // if del's selection total include child, delete child (not use child.end because child.end include child self, maybe can change to child.end-1)
-                if(child.start > _start && child._dfsDeepestRightEnd() <= _end){
+                // if del's selection total include child, delete child 
+                // not use child.end because child.end include child self, suppose deepest child is a leaf node, real selection end will be child.end-1
+                if(child.start > _start && child._dfsDeepestRightEnd()-1 <= _end){
                     return false
                 }
                 return true
@@ -156,7 +164,11 @@ export class AditorChildNode extends ANode {
     }
     /**
      * split node by _start and _end
-     * Todo: can't recursive split
+     * There is four spcial case:
+     * 1. split node is empty
+     * 2. after splited, front node is empty
+     * 3. after splited, back node is empty
+     * 4. after splited, front node and back node is empty
      * @param _start 
      * @param _end 
      * @returns 
@@ -177,23 +189,19 @@ export class AditorChildNode extends ANode {
             this.children = this.children.filter(item =>{
                 const splitNode = item.split(_start)
                 // when find split node, set flag to true, and push all nodes after split node to splitNodes
-                if(splitNode){
+                if(splitNode && splitFlag == false){
                     splitFlag = true
-                    // check if splitNode is empty, if empty, skip it
-                    if(splitNode.length() === 0){
-                        return true
-                    }
                     splitNodes.push(splitNode)
                     return true
                 }else if(splitFlag){
                     splitNodes.push(item)
                     return false
-                }else{
-                    return true
                 }
+                return true
             })
             const splitNode = aNodeFactory.createAditorNode(this.name, this.style, this.data) as AditorChildNode
             splitNode.children = splitNodes
+
             return splitNode
         }
     }
@@ -223,11 +231,45 @@ export class AditorChildNode extends ANode {
         }
         return null
     }
+    /**
+     * recursive call _isEmpty to check if node is empty
+     */
+    _isEmpty(): boolean{
+        for(let i=0; i<this.children.length; i++){
+            if(!this.children[i]._isEmpty()){
+                return false
+            }
+        }
+        return true
+    }
     _dfsDeepestRightEnd(): number {
         if(this.children.length === 0){
             return this.end
         }else{
             return this.children[this.children.length-1]._dfsDeepestRightEnd()
+        }
+    }
+    _dfsDeepestRightEndNode(): AditorChildNode | AditorLeafNode {
+        if(this.children.length === 0){
+            return this
+        }else{
+            return this.children[this.children.length-1]._dfsDeepestRightEndNode()
+        }
+    }
+
+    _dfsDeepestLeftStart(): number {
+        if(this.children.length === 0){
+            return this.start
+        }else{
+            return this.children[0]._dfsDeepestLeftStart()
+        }
+    }
+
+    _dfsDeepestLeftStartNode(): AditorChildNode | AditorLeafNode {
+        if(this.children.length === 0){
+            return this
+        }else{
+            return this.children[0]._dfsDeepestLeftStartNode()
         }
     }
 }
@@ -302,8 +344,20 @@ export class AditorLeafNode extends ANode {
     length(): number {
         return this.data.text.length
     }
+    _isEmpty(): boolean {
+        return this.data.text.length === 0
+    }
     _dfsDeepestRightEnd(): number {
         return this.end
+    }
+    _dfsDeepestRightEndNode(): AditorChildNode | AditorLeafNode {
+        return this
+    }
+    _dfsDeepestLeftStart(): number {
+        return this.start
+    }
+    _dfsDeepestLeftStartNode(): AditorChildNode | AditorLeafNode {
+        return this
     }
 }
 

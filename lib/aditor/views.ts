@@ -385,11 +385,11 @@ export class AditorDocView{
             if(splitContent instanceof AditorChildNode){
                 ancestorNode.children.splice(parentIndex+1, 0, splitContent)
                 states.calPosition()
-                sel.startNode = states.findDeepestLeftNodeByNode(splitContent)
+                sel.startNode = splitContent._dfsDeepestLeftStartNode()
                 sel.startOffset = 0
                 sel.endNode = sel.startNode
                 sel.endOffset = sel.startOffset
-            }            
+            }
         }
 
     }
@@ -421,43 +421,42 @@ export class AditorDocView{
             
             // find startNode's parent node's index
             const parentIndex = ancestorNode.children.findIndex((node) => node.id === parentNode.id)
+            console.log(`split sel startNode ${sel.startNode.start} startOffset ${sel.startOffset}`)
             // Insert a new node
             const splitContent = parentNode.split(sel.startNode.start+sel.startOffset)
-
+            // There is a difference between enterSelections and insertNodesSelections
+            // enter will insert a new node, whatever the splitContent is empty or not
+            // insertNodes will not insert splitContent if it is empty
             if(splitContent){
-                ancestorNode.children.splice(parentIndex+1, 0, splitContent)
+                if(!splitContent._isEmpty()){
+                    ancestorNode.children.splice(parentIndex+1, 0, splitContent)
+                }
+            }         
+            states.calPosition()   
+            // Get node list from data
+            const nodeList = data.nodeList
+            for(let i=0; i<nodeList.length; i++){
+                const node = nodeList[i]
+                // try insert node to startNode, if fall, try insert node to parentNode, if fall, try insert node to ancestorNode
+                const insertNode = states.insertNodeByPos(node, sel.startNode.start+sel.startOffset)
                 states.calPosition()
-                // Get node list from data
-                const nodeList = data.nodeList
-                for(let i=0; i<nodeList.length; i++){
-                    const node = nodeList[i]
-                    // try insert node to startNode, if fall, try insert node to parentNode, if fall, try insert node to ancestorNode
-                    const insertNode = states.insertNodeByPos(node, sel.startNode.start+sel.startOffset)
-                    states.calPosition()
-                    if(insertNode){
-                        sel.startNode = states.findDeepestRightNodeByNode(insertNode)
+                if(insertNode){
+                    sel.startNode = insertNode._dfsDeepestRightEndNode()
+                    sel.startOffset = sel.startNode.length()
+                    sel.endNode = sel.startNode
+                    sel.endOffset = sel.startOffset
+                    if(i === nodeList.length-1){
+                        // if last node type is adtiorText, execute backspace
+                        // make sure copy span element inline
+                        sel.startNode = insertNode._dfsDeepestRightEndNode()
                         sel.startOffset = sel.startNode.length()
                         sel.endNode = sel.startNode
                         sel.endOffset = sel.startOffset
-                        if(i === nodeList.length-1){
-                            // if last node type is adtiorText, execute backspace
-                            // make sure copy span element inline
-                            if(insertNode instanceof AditorLeafNode){
-                                sel.startNode = splitContent
-                                sel.startOffset = 0
-                                sel.endNode = sel.startNode
-                                sel.endOffset = sel.startOffset
-                                this.backspaceSelections(vsels, states)
-                            }
-                        }
+                        this.backspaceSelections(vsels, states)
                     }
                 }
-            }            
+            }
         }
-
-        
-
-
     }
 
 }
