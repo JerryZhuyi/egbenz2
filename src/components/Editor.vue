@@ -9,6 +9,8 @@ const props = defineProps({
   }
 })
 let aditorView:AditorDocView
+
+
 watchEffect(() => {
   if(props.docJson){
     aditorView = renderAditorFromJSON(props.docJson)
@@ -16,6 +18,7 @@ watchEffect(() => {
 });
 
 onMounted(() => {
+  
 })
 </script>
 

@@ -1,7 +1,7 @@
 import { Component } from 'vue'
 import { renderComponentFromNode } from './renderer';
 import { AditorDocState, type docStruct } from './states';
-import { AditorDocView } from './views';
+import { AditorDocView, SysEventsEnum } from './views';
 import { AditorNodeFactory, ANodeType, AditorChildNode, AditorLeafNode, ANode, NodeSelectionType } from './nodes';
 
 import aditor from './components/aditor.vue';
@@ -74,7 +74,8 @@ export function renderAditorFromJSON(json: any) {
 export {
     AditorDocState,
     AditorDocView,
-    docStruct
+    docStruct,
+    SysEventsEnum
 }
 export type { NodeSelectionType };
 

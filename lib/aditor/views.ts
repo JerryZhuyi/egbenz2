@@ -26,7 +26,7 @@ type SysEventsHandler = {
     drop?: (event: DragEvent, docState: AditorDocState, docView: AditorDocView) => void;
 }
 
-enum SysEventsEnum {
+export enum SysEventsEnum {
     keydown = 'keydown',
     keyup = 'keyup',
     keypress = 'keypress',
@@ -69,9 +69,14 @@ export class AditorDocView {
     docState!: AditorDocState;
     vNode!: VNode;
 
+    // Each advisor will have a doc event handler with its own scope
+    // Generally, after the root node component is mounted, binding related events are called by default
     docSysEventHandlers: SysEventsHandler = genDefaultSysInputEventHandlers();
     boundDocSysEvents: Map<string, { element: HTMLElement, handler: (e: Event) => void }> = new Map();
+    docSysEventHookBefore: Map<SysEventsEnum, ((e: Event, state: AditorDocState, view: AditorDocView) => void)[] > = genDefaultSysInputEventHook();
 
+    // For some extended or customized components
+    // if you want to fully write your own event listening, you can use this method
     sysEventHandlers: SysEventsHandler = genSysInputEventHandlers();
     boundSysEvents: Map<string, { element: HTMLElement, handler: (e: Event) => void }[]> = new Map();
 
@@ -146,15 +151,25 @@ export class AditorDocView {
      * @param hookBefore - The hook function to be executed before the default event handlers.
      * @param hookAfter - The hook function to be executed after the default event handlers.
      */
-    addDocEventHook(name: SysEventsEnum, hookBefore: () => void, hookAfter: () => void) {
-        // TODO: Implement the logic to add the hook functions before and after the default event handlers.
+    addDocEventHook(name: SysEventsEnum, hook: (e: Event, state:AditorDocState, view: AditorDocView) => void, type: 'before' | 'after' = 'before') {
+        if(type == 'before'){
+            this.docSysEventHookBefore.get(name)?.push(hook)
+        }
     }
 
     /**
      * Removes the hook functions from the document-level event control.
      */
-    removeDocEventHook() {
-        // TODO: Implement the logic to remove the hook functions from the document-level event control.
+    removeDocEventHook(name: SysEventsEnum, hool: (e: Event, state:AditorDocState, view: AditorDocView) => void, type: 'before' | 'after' = 'before') {
+        if(type == 'before'){
+            const hooks = this.docSysEventHookBefore.get(name)
+            if(hooks){
+                const index = hooks.findIndex(_ => _ === hool)
+                if(index !== -1){
+                    hooks.splice(index, 1)
+                }
+            }
+        }
     }
 
     /**
@@ -547,6 +562,7 @@ function genDefaultSysInputEventHandlers(): SysEventsHandler {
             e.preventDefault()
         },
         click: (e: MouseEvent, docState: AditorDocState, docView: AditorDocView) => {
+            docView.docSysEventHookBefore.get(SysEventsEnum.click)?.forEach((func) => func(e, docState, docView))
             e.preventDefault()
             docState.sels.updateSelections()
         },
@@ -588,6 +604,14 @@ function genDefaultSysInputEventHandlers(): SysEventsHandler {
         dragsart: () => { },
         drop: () => { }
     }
+}
+
+function genDefaultSysInputEventHook(): Map<SysEventsEnum, ((e: Event, state: AditorDocState, view: AditorDocView) => void)[] > {
+    const _map = new Map();
+    for (const name of Object.values(SysEventsEnum)) {
+        _map.set(name, []);
+    }
+    return _map
 }
 
 function genGlobalSysInputEventHandlers(): SysEventsHandler {
