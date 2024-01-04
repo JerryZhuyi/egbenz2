@@ -1,7 +1,7 @@
 import type { AditorDocState } from "./states";
-import {loadJSON2ANode, loadText2Node} from "./states";
+import { loadJSON2ANode, loadText2Node } from "./states";
 import { collapseDOMSelection, setDOMSelection, VirtualSelection } from "./selection";
-import { VNode,nextTick } from 'vue'
+import { VNode, nextTick } from 'vue'
 import { AditorChildNode, AditorLeafNode, NodeSelectionType } from "./nodes";
 import { str2AditorDocJson } from "./renderer";
 
@@ -57,7 +57,7 @@ enum ViewEventEnum {
 function genSysInputEventHandlers(): SysEventsHandler {
     let sysEventHandlers: SysEventsHandler = {};
     for (let key in SysEventsEnum) {
-        sysEventHandlers[key as SysInputEventsHandlerKey] = () => {};
+        sysEventHandlers[key as SysInputEventsHandlerKey] = () => { };
     }
     return sysEventHandlers;
 }
@@ -65,7 +65,7 @@ function genSysInputEventHandlers(): SysEventsHandler {
 /**
  * @description: The view of the document. non global events management. only manage the events of the document.
  */
-export class AditorDocView{
+export class AditorDocView {
     docState!: AditorDocState;
     vNode!: VNode;
 
@@ -81,25 +81,25 @@ export class AditorDocView{
     isComposing: boolean = false;
     composingTimeout: number = -1;
 
-    constructor(){
+    constructor() {
     }
 
-    init(docState: AditorDocState, vNode: VNode){
+    init(docState: AditorDocState, vNode: VNode) {
         this.docState = docState
         this.vNode = vNode
     }
 
-    bindGlobalSysEvent(rootElement: HTMLElement){
+    bindGlobalSysEvent(rootElement: HTMLElement) {
         for (const [name, handlers] of Object.entries(this.globalSysEventsHandlers)) {
             const boundHandler = (e: any) => {
                 // Only Excute the handlers when the event target is not in the rootElement.
-                if(!rootElement.contains(e.target as Node))
+                if (!rootElement.contains(e.target as Node))
                     handlers(e, this.docState, this)
             };
 
-            if(name === 'mousewheel') 
+            if (name === 'mousewheel')
                 window.addEventListener('mousewheel', boundHandler, { passive: true });
-            else 
+            else
                 window.addEventListener(name, boundHandler);
 
             this.boundGlobalSysEvents.set(name, boundHandler);
@@ -115,13 +115,13 @@ export class AditorDocView{
     bindDocSysEvent(element: HTMLElement) {
         for (const name of Object.values(SysEventsEnum)) {
             if (name in this.docSysEventHandlers) {
-                const boundHandler = (e:any) => this.docSysEventHandlers[name]!(e as any, this.docState, this);
-                if(name === 'mousewheel') 
+                const boundHandler = (e: any) => this.docSysEventHandlers[name]!(e as any, this.docState, this);
+                if (name === 'mousewheel')
                     element.addEventListener('mousewheel', boundHandler, { passive: true });
-                else 
+                else
                     element.addEventListener(name, boundHandler);
                 if (!this.boundDocSysEvents.has(name)) {
-                    this.boundDocSysEvents.set(name, {element, handler: boundHandler});
+                    this.boundDocSysEvents.set(name, { element, handler: boundHandler });
                 }
             }
         }
@@ -137,7 +137,7 @@ export class AditorDocView{
             const bindObj = this.boundDocSysEvents.get(name);
             element.removeEventListener(name, (bindObj?.handler as EventListener));
         }
-    }    
+    }
 
 
     /**
@@ -146,7 +146,7 @@ export class AditorDocView{
      * @param hookBefore - The hook function to be executed before the default event handlers.
      * @param hookAfter - The hook function to be executed after the default event handlers.
      */
-    addDocEventHook(name:SysEventsEnum, hookBefore: () => void, hookAfter: () => void) {
+    addDocEventHook(name: SysEventsEnum, hookBefore: () => void, hookAfter: () => void) {
         // TODO: Implement the logic to add the hook functions before and after the default event handlers.
     }
 
@@ -164,19 +164,19 @@ export class AditorDocView{
      * @param element - The HTML element to bind the event to.
      * @param callfuncs - An object containing callback functions for each system input event.
      */
-    bindSysEvent(element: HTMLElement, callfuncs:SysEventsHandler) {
+    bindSysEvent(element: HTMLElement, callfuncs: SysEventsHandler) {
         for (const name of Object.values(SysEventsEnum)) {
             if (name in callfuncs) {
-                const boundHandler = (e:any) => callfuncs[name]!(e as any, this.docState, this);
-                if(name === 'mousewheel') 
+                const boundHandler = (e: any) => callfuncs[name]!(e as any, this.docState, this);
+                if (name === 'mousewheel')
                     element.addEventListener('mousewheel', boundHandler, { passive: true });
-                else 
+                else
                     element.addEventListener(name, boundHandler);
 
                 if (!this.boundSysEvents.has(name)) {
                     this.boundSysEvents.set(name, []);
                 }
-                this.boundSysEvents.get(name)!.push({element, handler: boundHandler});
+                this.boundSysEvents.get(name)!.push({ element, handler: boundHandler });
             }
         }
     }
@@ -190,7 +190,7 @@ export class AditorDocView{
         for (const [name] of Object.entries(this.sysEventHandlers)) {
             const handlers = this.boundSysEvents.get(name);
             if (handlers) {
-                for (const {element: boundElement, handler} of handlers) {
+                for (const { element: boundElement, handler } of handlers) {
                     if (boundElement === element) {
                         element.removeEventListener(name, handler);
                     }
@@ -198,27 +198,27 @@ export class AditorDocView{
             }
         }
     }
-    
-    
+
+
     /**
      * Binds the system input event to the specified element.
      */
-    dispatchViewEvent(e:Event, actionName: ViewEventEnum, vsels: VirtualSelection[], states: AditorDocState, data: any={}) {
+    dispatchViewEvent(e: Event, actionName: ViewEventEnum, vsels: VirtualSelection[], states: AditorDocState, data: any = {}) {
         const copyState = states.copySelf()
         console.log("selection ", vsels[0], "dispatch event")
         const vselsNode = copyState.copySels(vsels)
 
-        if(actionName === ViewEventEnum.DELETE_SELECTIONS){
+        if (actionName === ViewEventEnum.DELETE_SELECTIONS) {
             this.deleteSelections(vselsNode, copyState)
-        }else if(actionName === ViewEventEnum.INSERT_SELECTIONS){
+        } else if (actionName === ViewEventEnum.INSERT_SELECTIONS) {
             this.insertSelections(vselsNode, copyState, data)
-        }else if(actionName === ViewEventEnum.REPLCAE_SELECTIONS){
+        } else if (actionName === ViewEventEnum.REPLCAE_SELECTIONS) {
             this.replaceSelections(vselsNode, copyState, data)
-        }else if(actionName === ViewEventEnum.BACKSPACE_SELECTIONS){
+        } else if (actionName === ViewEventEnum.BACKSPACE_SELECTIONS) {
             this.backspaceSelections(vselsNode, copyState)
-        }else if(actionName === ViewEventEnum.ENTER_SELECTIONS){
+        } else if (actionName === ViewEventEnum.ENTER_SELECTIONS) {
             this.enterSelections(vselsNode, copyState)
-        }else if(actionName === ViewEventEnum.INSERT_NODES_SELECTIONS){
+        } else if (actionName === ViewEventEnum.INSERT_NODES_SELECTIONS) {
             this.insertNodesSelections(vselsNode, copyState, data)
         }
 
@@ -226,38 +226,38 @@ export class AditorDocView{
         states.root.children = copyState.root.children
         states.sels.setSelectionsByNodeSelection(vselsNode)
         console.log("stay sels: ", vselsNode[0])
-        nextTick(()=>setDOMSelection(this, states.sels.selections))
+        nextTick(() => setDOMSelection(this, states.sels.selections))
     }
 
 
-    deleteSelections(vsels: NodeSelectionType[], states: AditorDocState){
-        for(const sel of vsels){
-            if(sel.startNode == null || sel.endNode == null)
+    deleteSelections(vsels: NodeSelectionType[], states: AditorDocState) {
+        for (const sel of vsels) {
+            if (sel.startNode == null || sel.endNode == null)
                 continue
             const LCANode = states.dfsFindLCANode(sel.startNode, sel.endNode)
             states.deleteNodeByPos(sel.startNode.start + sel.startOffset, sel.endNode.start + sel.endOffset)
-            if(LCANode != null && LCANode.length >= 3){
+            if (LCANode != null && LCANode.length >= 3) {
                 states.mergeNode(LCANode[1], LCANode[2])
             }
             states.calPosition()
         }
 
-        for(const sel of vsels){
+        for (const sel of vsels) {
             sel.endNode = sel.startNode
             sel.endOffset = sel.startOffset
         }
     }
 
-    insertSelections(vsels: NodeSelectionType[], states: AditorDocState, data: any ={}){
+    insertSelections(vsels: NodeSelectionType[], states: AditorDocState, data: any = {}) {
         // Todo:
         // Beta Only Text
         const text: string = data?.text
 
-        for(const sel of vsels){
-            if(sel.startNode == null || sel.endNode == null)
+        for (const sel of vsels) {
+            if (sel.startNode == null || sel.endNode == null)
                 continue
             const insertNode = states.insertTextByPos(text, sel.startNode.start + sel.startOffset)
-            if(insertNode != null && insertNode.id == sel.startNode.id){
+            if (insertNode != null && insertNode.id == sel.startNode.id) {
                 sel.startNode = insertNode
                 sel.endNode = insertNode
                 sel.startOffset = sel.startOffset + text.length
@@ -267,17 +267,17 @@ export class AditorDocView{
         }
     }
 
-    replaceSelections(vsels: NodeSelectionType[], states: AditorDocState, data: any = {}){
-        for(const sel of vsels){
-            if(sel.startNode == null || sel.endNode == null)
+    replaceSelections(vsels: NodeSelectionType[], states: AditorDocState, data: any = {}) {
+        for (const sel of vsels) {
+            if (sel.startNode == null || sel.endNode == null)
                 continue
             const LCANode = states.dfsFindLCANode(sel.startNode, sel.endNode)
             states.deleteNodeByPos(sel.startNode.start + sel.startOffset, sel.endNode.start + sel.endOffset)
-            if(LCANode != null && LCANode.length >= 3){
+            if (LCANode != null && LCANode.length >= 3) {
                 states.mergeNode(LCANode[1], LCANode[2])
             }
             const insertNode = states.insertTextByPos(data.text, sel.startNode.start + sel.startOffset)
-            if(insertNode != null && insertNode.id == sel.startNode.id){
+            if (insertNode != null && insertNode.id == sel.startNode.id) {
                 sel.startNode = insertNode
                 sel.endNode = insertNode
                 sel.startOffset = sel.startOffset + data.text.length
@@ -286,79 +286,79 @@ export class AditorDocView{
             states.calPosition()
         }
 
-        for(const sel of vsels){
+        for (const sel of vsels) {
             sel.endNode = sel.startNode
             sel.endOffset = sel.startOffset
         }
     }
 
-    backspaceSelections(vsels: NodeSelectionType[], states: AditorDocState){
-        for(const sel of vsels){
-            if(sel.startNode == null || sel.endNode == null)
+    backspaceSelections(vsels: NodeSelectionType[], states: AditorDocState) {
+        for (const sel of vsels) {
+            if (sel.startNode == null || sel.endNode == null)
                 continue
-            
+
             // If is a single selection area, then search for the previous node through recursion
-            if(sel.startNode.start+sel.startOffset === sel.endNode.start+sel.endOffset){
-                const _recursiveFindPrevNode = (_start: number, _startNode: AditorChildNode | AditorLeafNode):{node:AditorChildNode | AditorLeafNode, offset:number} | null=> {
-                    if(_startNode == null)
+            if (sel.startNode.start + sel.startOffset === sel.endNode.start + sel.endOffset) {
+                const _recursiveFindPrevNode = (_start: number, _startNode: AditorChildNode | AditorLeafNode): { node: AditorChildNode | AditorLeafNode, offset: number } | null => {
+                    if (_startNode == null)
                         return null
                     const prevPos = _start - 1
-                    if(prevPos <= 0){
+                    if (prevPos <= 0) {
                         return null
                     }
                     const prevNode = states.findNodeByPos(prevPos)
-                    if(prevNode == null)
+                    if (prevNode == null)
                         return null
                     const parentNode = states.findNodeParentNodeByPos(_start)
-                    if(parentNode == null)
+                    if (parentNode == null)
                         return null
 
                     // if prev node is the same as the start node stop the recursive,and return node and prevPos
-                    if(_startNode.id === prevNode.id){
-                        return {node: prevNode, offset:prevPos-prevNode.start }
-                    }else if(parentNode.id !== prevNode.id){ // if prev node is not the parent node, return prevNode and Pos
-                        if(prevNode instanceof AditorChildNode){
+                    if (_startNode.id === prevNode.id) {
+                        return { node: prevNode, offset: prevPos - prevNode.start }
+                    } else if (parentNode.id !== prevNode.id) { // if prev node is not the parent node, return prevNode and Pos
+                        if (prevNode instanceof AditorChildNode) {
                             return _recursiveFindPrevNode(prevPos, prevNode)
-                        }else{
-                            return {node: prevNode, offset:prevNode.length()}
+                        } else {
+                            return { node: prevNode, offset: prevNode.length() }
                         }
-                    }else if(parentNode.id === prevNode.id){ // if prev node is the parent node, stop the recursive, and return node and prevPos
+                    } else if (parentNode.id === prevNode.id) { // if prev node is the parent node, stop the recursive, and return node and prevPos
                         return _recursiveFindPrevNode(prevPos, prevNode)
-                    }else{
+                    } else {
                         console.error("[backspaceSelections]Unknow find prev node")
                         return null
                     }
                 }
-                const reFindNode = _recursiveFindPrevNode(sel.startNode.start+sel.startOffset, sel.startNode)
-                
-                if(reFindNode != null){
+                const reFindNode = _recursiveFindPrevNode(sel.startNode.start + sel.startOffset, sel.startNode)
+
+                if (reFindNode != null) {
                     sel.startNode = reFindNode.node
                     sel.startOffset = reFindNode.offset
                 }
             }
-            
+
             const LCANode = states.dfsFindLCANode(sel.startNode, sel.endNode)
             states.deleteNodeByPos(sel.startNode.start + sel.startOffset, sel.endNode.start + sel.endOffset)
-            if(LCANode != null && LCANode.length >= 3){
+            if (LCANode != null && LCANode.length >= 3) {
                 states.mergeNode(LCANode[1], LCANode[2])
             }
             states.calPosition()
         }
 
-        for(const sel of vsels){
+        for (const sel of vsels) {
             sel.endNode = sel.startNode
             sel.endOffset = sel.startOffset
         }
     }
 
-    enterSelections(vsels: NodeSelectionType[], states: AditorDocState){
+    enterSelections(vsels: NodeSelectionType[], states: AditorDocState) {
         // First delete the selection
-        for(const sel of vsels){
-            if(sel.startNode == null || sel.endNode == null)
+        for (const sel of vsels) {
+            if (sel.startNode == null || sel.endNode == null)
                 continue
             const LCANode = states.dfsFindLCANode(sel.startNode, sel.endNode)
             states.deleteNodeByPos(sel.startNode.start + sel.startOffset, sel.endNode.start + sel.endOffset)
-            if(LCANode != null && LCANode.length >= 3){
+            if (LCANode != null && LCANode.length >= 3) {
                 states.mergeNode(LCANode[1], LCANode[2])
             }
             states.calPosition()
@@ -367,23 +367,23 @@ export class AditorDocView{
         }
 
         // Locate startNode's parent node
-        for(const sel of vsels){
-            if(sel.startNode == null || sel.endNode == null)
+        for (const sel of vsels) {
+            if (sel.startNode == null || sel.endNode == null)
                 continue
             const parentNode = states.findNodeParentNodeByPos(sel.startNode.start + sel.startOffset)
-            if(parentNode == null)
+            if (parentNode == null)
                 continue
             const ancestorNode = states.findNodeParentNodeByPos(parentNode.start)
-            if(ancestorNode == null)
+            if (ancestorNode == null)
                 continue
-            
+
             // find startNode's parent node's index
             const parentIndex = ancestorNode.children.findIndex((node) => node.id === parentNode.id)
             // Insert a new node
-            const splitContent = parentNode.split(sel.startNode.start+sel.startOffset)
+            const splitContent = parentNode.split(sel.startNode.start + sel.startOffset)
 
-            if(splitContent instanceof AditorChildNode){
-                ancestorNode.children.splice(parentIndex+1, 0, splitContent)
+            if (splitContent instanceof AditorChildNode) {
+                ancestorNode.children.splice(parentIndex + 1, 0, splitContent)
                 states.calPosition()
                 sel.startNode = splitContent._dfsDeepestLeftStartNode()
                 sel.startOffset = 0
@@ -394,13 +394,13 @@ export class AditorDocView{
 
     }
 
-    insertNodesSelections(vsels: NodeSelectionType[], states: AditorDocState, data: any = {}){
-        for(const sel of vsels){
-            if(sel.startNode == null || sel.endNode == null)
+    insertNodesSelections(vsels: NodeSelectionType[], states: AditorDocState, data: any = {}) {
+        for (const sel of vsels) {
+            if (sel.startNode == null || sel.endNode == null)
                 continue
             const LCANode = states.dfsFindLCANode(sel.startNode, sel.endNode)
             states.deleteNodeByPos(sel.startNode.start + sel.startOffset, sel.endNode.start + sel.endOffset)
-            if(LCANode != null && LCANode.length >= 3){
+            if (LCANode != null && LCANode.length >= 3) {
                 states.mergeNode(LCANode[1], LCANode[2])
             }
             states.calPosition()
@@ -409,43 +409,43 @@ export class AditorDocView{
         }
 
         // Locate startNode's parent node
-        for(const sel of vsels){
-            if(sel.startNode == null || sel.endNode == null)
+        for (const sel of vsels) {
+            if (sel.startNode == null || sel.endNode == null)
                 continue
             const parentNode = states.findNodeParentNodeByPos(sel.startNode.start + sel.startOffset)
-            if(parentNode == null)
+            if (parentNode == null)
                 continue
             const ancestorNode = states.findNodeParentNodeByPos(parentNode.start)
-            if(ancestorNode == null)
+            if (ancestorNode == null)
                 continue
-            
+
             // find startNode's parent node's index
             const parentIndex = ancestorNode.children.findIndex((node) => node.id === parentNode.id)
             console.log(`split sel startNode ${sel.startNode.start} startOffset ${sel.startOffset}`)
             // Insert a new node
-            const splitContent = parentNode.split(sel.startNode.start+sel.startOffset)
+            const splitContent = parentNode.split(sel.startNode.start + sel.startOffset)
             // There is a difference between enterSelections and insertNodesSelections
             // enter will insert a new node, whatever the splitContent is empty or not
             // insertNodes will not insert splitContent if it is empty
-            if(splitContent){
-                if(!splitContent._isEmpty()){
-                    ancestorNode.children.splice(parentIndex+1, 0, splitContent)
+            if (splitContent) {
+                if (!splitContent._isEmpty()) {
+                    ancestorNode.children.splice(parentIndex + 1, 0, splitContent)
                 }
-            }         
-            states.calPosition()   
+            }
+            states.calPosition()
             // Get node list from data
             const nodeList = data.nodeList
-            for(let i=0; i<nodeList.length; i++){
+            for (let i = 0; i < nodeList.length; i++) {
                 const node = nodeList[i]
                 // try insert node to startNode, if fall, try insert node to parentNode, if fall, try insert node to ancestorNode
-                const insertNode = states.insertNodeByPos(node, sel.startNode.start+sel.startOffset)
+                const insertNode = states.insertNodeByPos(node, sel.startNode.start + sel.startOffset)
                 states.calPosition()
-                if(insertNode){
+                if (insertNode) {
                     sel.startNode = insertNode._dfsDeepestRightEndNode()
                     sel.startOffset = sel.startNode.length()
                     sel.endNode = sel.startNode
                     sel.endOffset = sel.startOffset
-                    if(i === nodeList.length-1){
+                    if (i === nodeList.length - 1) {
                         // if last node type is adtiorText, execute backspace
                         // make sure copy span element inline
                         sel.startNode = insertNode._dfsDeepestRightEndNode()
@@ -461,9 +461,9 @@ export class AditorDocView{
 
 }
 
-function genDefaultSysInputEventHandlers(): SysEventsHandler{
+function genDefaultSysInputEventHandlers(): SysEventsHandler {
     return {
-        keydown: (e: KeyboardEvent, docState:AditorDocState, docView:AditorDocView) => {
+        keydown: (e: KeyboardEvent, docState: AditorDocState, docView: AditorDocView) => {
             const ctrlKey = e.ctrlKey
             const shiftKey = e.shiftKey
             const altKey = e.altKey
@@ -495,8 +495,10 @@ function genDefaultSysInputEventHandlers(): SysEventsHandler{
                             clipItem.getType(htmlType).then(data => {
                                 data.text().then(htmlText => {
                                     const pasteANodeList = loadJSON2ANode(str2AditorDocJson(htmlText));
+                                    // filter isEmpty node 
+                                    pasteANodeList.filter(_ => !_._isEmpty())
                                     pasteANodeList.forEach(_ => _.selfMerge(0, Number.MAX_SAFE_INTEGER, []))
-                                    docView.dispatchViewEvent(e, ViewEventEnum.INSERT_NODES_SELECTIONS, docState.sels.selections, docState, {nodeList: pasteANodeList});
+                                    docView.dispatchViewEvent(e, ViewEventEnum.INSERT_NODES_SELECTIONS, docState.sels.selections, docState, { nodeList: pasteANodeList });
                                 });
                             });
                         } else {
@@ -504,7 +506,7 @@ function genDefaultSysInputEventHandlers(): SysEventsHandler{
                             clipItem.getType(clipItem.types[0]).then(data => {
                                 data.text().then(text => {
                                     const textNodes = loadText2Node(text)
-                                    docView.dispatchViewEvent(e, ViewEventEnum.INSERT_NODES_SELECTIONS, docState.sels.selections, docState, {nodeList: textNodes});
+                                    docView.dispatchViewEvent(e, ViewEventEnum.INSERT_NODES_SELECTIONS, docState.sels.selections, docState, { nodeList: textNodes });
                                 });
                             });
                         }
@@ -512,7 +514,7 @@ function genDefaultSysInputEventHandlers(): SysEventsHandler{
                 });
                 return
             } else if (ctrlKey && e.key === 'c') { // 复制事件
-                return 
+                return
             } else if (ctrlKey && e.key === 's') { // 保存事件
                 e.preventDefault()
                 // this.customEvent.save.map(func => func(e, this))
@@ -533,64 +535,64 @@ function genDefaultSysInputEventHandlers(): SysEventsHandler{
             } else if (!ctrlKey && !altKey
                 && (KEY_CODE.keyCodeAlphabet.includes(e.keyCode) || KEY_CODE.keyCodeNumber.includes(e.keyCode) || Object.prototype.hasOwnProperty.call(KEY_CODE.keyCodeSymbol, e.keyCode))) {
                 docState.sels.updateSelections()
-                docView.dispatchViewEvent(e, ViewEventEnum.REPLCAE_SELECTIONS, docState.sels.selections, docState, {text: e.key})
+                docView.dispatchViewEvent(e, ViewEventEnum.REPLCAE_SELECTIONS, docState.sels.selections, docState, { text: e.key })
                 e.preventDefault()
                 return
             }
         },
-        keyup: (e: KeyboardEvent, docState:AditorDocState, docView:AditorDocView) => {
+        keyup: (e: KeyboardEvent, docState: AditorDocState, docView: AditorDocView) => {
             e.preventDefault()
         },
-        keypress: (e: KeyboardEvent, docState:AditorDocState, docView:AditorDocView) => {
+        keypress: (e: KeyboardEvent, docState: AditorDocState, docView: AditorDocView) => {
             e.preventDefault()
         },
-        click: (e: MouseEvent, docState:AditorDocState, docView:AditorDocView) => {
+        click: (e: MouseEvent, docState: AditorDocState, docView: AditorDocView) => {
             e.preventDefault()
             docState.sels.updateSelections()
         },
-        mousedown: () => {},
-        mouseleave: () => {},
+        mousedown: () => { },
+        mouseleave: () => { },
         mouseup: () => {
         },
-        blur: () => {},
-        mouseover: () => {},
-        mousewheel: () => {},
-        compositionstart: (e: CompositionEvent, docState:AditorDocState, docView:AditorDocView) => {
+        blur: () => { },
+        mouseover: () => { },
+        mousewheel: () => { },
+        compositionstart: (e: CompositionEvent, docState: AditorDocState, docView: AditorDocView) => {
             docState.sels.updateSelections()
             collapseDOMSelection()
-            if(docView.isComposing == false){
+            if (docView.isComposing == false) {
                 docView.isComposing = true
                 docView.dispatchViewEvent(e, ViewEventEnum.DELETE_SELECTIONS, docState.sels.selections, docState)
             }
         },
-        compositionend: (e: CompositionEvent, docState:AditorDocState, docView:AditorDocView) => {
+        compositionend: (e: CompositionEvent, docState: AditorDocState, docView: AditorDocView) => {
             collapseDOMSelection()
             docView.composingTimeout = window.setTimeout(() => {
-                docView.dispatchViewEvent(e, ViewEventEnum.INSERT_SELECTIONS, docState.sels.selections, docState, {text: e.data})
+                docView.dispatchViewEvent(e, ViewEventEnum.INSERT_SELECTIONS, docState.sels.selections, docState, { text: e.data })
                 docView.isComposing = false
             }, 50)
             e.preventDefault()
         },
-        input: (e: InputEvent, docState:AditorDocState, docView:AditorDocView) => {
-            if(docView.isComposing && e.inputType == 'insertText'){
-                if(docView.composingTimeout){
+        input: (e: InputEvent, docState: AditorDocState, docView: AditorDocView) => {
+            if (docView.isComposing && e.inputType == 'insertText') {
+                if (docView.composingTimeout) {
                     clearTimeout(docView.composingTimeout)
                 }
-                docView.dispatchViewEvent(e, ViewEventEnum.INSERT_SELECTIONS, docState.sels.selections, docState, {text: e.data})
+                docView.dispatchViewEvent(e, ViewEventEnum.INSERT_SELECTIONS, docState.sels.selections, docState, { text: e.data })
             }
             e.preventDefault()
 
-            
+
         },
-        drag: () => {},
-        dragsart: () => {},
-        drop: () => {}
+        drag: () => { },
+        dragsart: () => { },
+        drop: () => { }
     }
 }
 
-function genGlobalSysInputEventHandlers(): SysEventsHandler{
+function genGlobalSysInputEventHandlers(): SysEventsHandler {
     return {
-        click: (e: Event, docState:AditorDocState, docView:AditorDocView) => {
+        click: (e: Event, docState: AditorDocState, docView: AditorDocView) => {
         },
     }
 }

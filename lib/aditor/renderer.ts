@@ -358,6 +358,8 @@ class Parser{
   ContentNode(){  
     const parentNode = this._currentNode()
     const value = htmlspecialcharsDecode(this._eat("CONTENT").value)
+    // Todo: replace \n \r and \r\n to ' '
+    // const value = htmlspecialcharsDecode(this._eat("CONTENT").value).replace(/\r\n|\n|\r/g, ' ')
     const currentNode = {
       type: "content",
       tagName: "content",
