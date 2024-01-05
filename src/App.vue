@@ -4,6 +4,7 @@ import Explorer from './components/Explorer.vue';
 import explorerState from './components/Explorer.ts'
 import Breadcrumb from './components/Breadcrumb.vue';
 import Editor from './components/Editor.vue';
+import EditorToolbar from './components/EditorToolbar.vue';
 
 onMounted(() => {
 })
@@ -38,7 +39,7 @@ onMounted(() => {
           </div>
         </el-tab-pane>
       </el-tabs>
-
+      <editor-toolbar></editor-toolbar>
     </div>
   </div>
 </template>
