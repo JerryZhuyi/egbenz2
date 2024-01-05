@@ -16,7 +16,6 @@ export function renderComponentFromNode(aNode: AditorChildNode | AditorLeafNode,
     return h(component, {
       aNode,
       docView,
-      style: aNode.style,
       key: aNode.virtualId,
       aditorId: `_aditor-${aNode.start}`,
     })
@@ -731,7 +730,8 @@ function htmlspecialcharsDecode(str: string) {
   return str.replace(/&quot;|&amp;|&lt;|&gt;|&nbsp;/g, (match) => replacements[match]);
 }
 
-const SUPPORT_STYLE_KEY = ["color", "font-size", "font-weight", "font-family", "text-decoration", "background-color", "text-align"]
+// Paste Render support style key name list
+const SUPPORT_STYLE_KEY = ["color", "font-size", "font-weight", "text-decoration", "background-color", "text-align"]
 
 function convertStyleString(styleStr: string | null, validKey: string[] = SUPPORT_STYLE_KEY) {
   if (!styleStr) {
