@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { onMounted } from 'vue';
+import { onMounted,ref } from 'vue';
 import Explorer from './components/Explorer.vue';
 import explorerState from './components/Explorer.ts'
 import Breadcrumb from './components/Breadcrumb.vue';
 import Editor from './components/Editor.vue';
 import EditorToolbar from './components/EditorToolbar.vue';
+const toolBarRef = ref(null)
 
 onMounted(() => {
+  console.log(toolBarRef.value)
 })
 
 </script>
@@ -34,12 +36,12 @@ onMounted(() => {
               <breadcrumb :openedNodePath="explorerState.openedNodePath.value"></breadcrumb>
             </div>
             <div>
-              <editor :docJson="(item.data.docJson as undefined)"></editor>
+              <editor :toolBar="toolBarRef" :docJson="(item.data.docJson as undefined)"></editor>
             </div>
           </div>
         </el-tab-pane>
       </el-tabs>
-      <editor-toolbar></editor-toolbar>
+      <editor-toolbar ref="toolBarRef"></editor-toolbar>
     </div>
   </div>
 </template>
@@ -76,7 +78,8 @@ onMounted(() => {
 .content-main{
   height: calc(100vh - 61px);
   padding: 5px 15px;
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 </style>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive, h } from 'vue'
+import { ref, reactive, h, nextTick } from 'vue'
 import { ArrowDown } from '@element-plus/icons-vue'
 import {
   TextBold16Regular as BoldIcon
@@ -9,7 +9,6 @@ import {
   , Link16Regular as LinkIcon
   , TextColor16Regular as ColorIcon
   , TextEffects24Filled as TextColorIcon
-  , BorderOutside24Regular as BackgroundIcon
   , TextT20Filled as TextIcon
   , TextHeader120Filled as H1Icon
   , TextHeader220Filled as H2Icon
@@ -19,6 +18,7 @@ import {
   , TextAlignRight20Filled as AlignRightIcon
 
 } from '@vicons/fluent'
+import { AditorDocState, AditorDocView } from '@lib/aditor'
 
 const size = ref(0)
 const titleList = [
@@ -45,7 +45,7 @@ const TEXT_COLOR = {
   , '蓝色': 'rgb(36, 91, 219)'
   , '紫色': 'rgb(100, 37, 208)'
 }
-
+type TEXT_COLOR_KEY = keyof typeof TEXT_COLOR
 // sixteen background colors
 const BACKGROUND_COLOR = {
   '透明': 'rgba(0, 0, 0, 0)'
@@ -66,7 +66,21 @@ const BACKGROUND_COLOR = {
   , '紫色': 'rgba(147, 90, 246, 0.55)'
 }
 
-const toolBarAttrs = reactive({
+// get BACKGROUND_COLOR all key and use for type annotation
+type BACKGROUND_COLOR_KEY = keyof typeof BACKGROUND_COLOR
+type ToolBarAttrs = {
+  title: string
+  alignment: string
+  fontWeight: boolean
+  strikethrough: boolean
+  italic: boolean
+  underline: boolean
+  link: boolean
+  textColor: TEXT_COLOR_KEY
+  backgroundColor: BACKGROUND_COLOR_KEY
+}
+
+const toolBarAttrs:ToolBarAttrs = reactive({
   title: '正文',
   alignment: '左对齐',
   fontWeight: true,
@@ -78,10 +92,87 @@ const toolBarAttrs = reactive({
   backgroundColor: '浅红色'
 })
 
+const style = reactive({
+  visibility: 'hidden',
+  zIndex: 100,
+  position: 'absolute',
+  top: '10px',
+  left: '10px',
+})
+
+enum DisplayStateEnum {
+  show = 'show',
+  onShow = 'onShow',
+  hide = 'hide',
+  onHide = 'onHide'
+}
+
+const displayState = ref(DisplayStateEnum.hide)
+
+const toolBarRef = ref()
+
+// move toolBarRef to specified element 
+const _moveToolbarToElement = (el:Element)=>{
+  const originNode = toolBarRef.value.$el
+  originNode.parentNode?.removeChild(originNode)
+  el.appendChild(originNode)
+}
+
+const _moveToolbarPosition = (e:MouseEvent)=>{
+  const x = e.clientX
+  // const y = e.clientY
+  // located the e target element position
+  const targetRect = (e.target as Element)?.getBoundingClientRect()
+  // const targetX = targetRect?.x
+  const targetY = targetRect?.y
+  // get the toolBarRef element width and height
+  const toolBarRefWidth = toolBarRef.value.$el.clientWidth
+  const toolBarRefHeight = toolBarRef.value.$el.clientHeight
+  // get the window width and height
+  const windowWidth = window.innerWidth
+  const windowHeight = window.innerHeight
+  // get the toolBarRef element left and top
+  let left = x! - toolBarRefWidth / 2 -300
+  let top = targetY! - toolBarRefHeight - 40
+  // if the toolBarRef element is out of the window, move it to the window
+  if (left < 0) {
+    left = 0
+  } else if (left + toolBarRefWidth > windowWidth) {
+    left = windowWidth - toolBarRefWidth
+  }
+  if (top < 0) {
+    top = 0
+  } else if (top + toolBarRefHeight > windowHeight) {
+    top = windowHeight - toolBarRefHeight
+  }
+  style.left = `${left}px`
+  style.top = `${top}px`
+}
+
+
+const init = (e:Event, __:AditorDocState, view:AditorDocView)=>{
+  if(displayState.value === DisplayStateEnum.hide){
+    const container = document.getElementById(view.vNode.key as string)?.parentElement
+    _moveToolbarToElement(container as Element)
+    _moveToolbarPosition(e as MouseEvent)
+    setTimeout(()=>toolBarRef.value.$el.click(), 100)  
+  }  
+}
+
+defineExpose({
+  init: init
+})
+
 </script>
 
 <template>
-  <el-popover popper-style="padding:8px" trigger="click" placement="top" width="445">
+  <el-popover popper-style="padding:8px" trigger="click" placement="top" width="445"
+
+    @before-enter="displayState = DisplayStateEnum.onShow"
+    @after-enter="displayState = DisplayStateEnum.show"
+    @before-leave="displayState = DisplayStateEnum.onHide"
+    @after-leave="displayState = DisplayStateEnum.hide"
+  >
     <el-space :size="size">
       <el-dropdown>
         <el-button text>
@@ -197,7 +288,7 @@ const toolBarAttrs = reactive({
       </el-popover>
     </el-space>
     <template #reference>
-      <el-button>Hi</el-button>
+      <el-button ref="toolBarRef" :style="style">Hi</el-button>
     </template>
   </el-popover>
 </template>
