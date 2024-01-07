@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive, h, nextTick } from 'vue'
+import { ref, reactive, h } from 'vue'
 import { ArrowDown } from '@element-plus/icons-vue'
 import {
   TextBold16Regular as BoldIcon
@@ -286,7 +286,7 @@ const init = (e: Event, __: AditorDocState, view: AditorDocView) => {
       setTimeout(()=>_showToolBar(), 50)
     }
   }
-  
+
   clearTimeout(moveTimeout)
   moveTimeout = setTimeout(() => {
     _showToolBar()
