@@ -80,7 +80,7 @@ type ToolBarAttrs = {
   backgroundColor: BACKGROUND_COLOR_KEY
 }
 
-const toolBarAttrs:ToolBarAttrs = reactive({
+const toolBarAttrs: ToolBarAttrs = reactive({
   title: '正文',
   alignment: '左对齐',
   fontWeight: true,
@@ -112,51 +112,192 @@ const displayState = ref(DisplayStateEnum.hide)
 const toolBarRef = ref()
 
 // move toolBarRef to specified element 
-const _moveToolbarToElement = (el:Element)=>{
+const _moveToolbarToElement = (el: Element) => {
   const originNode = toolBarRef.value.$el
   originNode.parentNode?.removeChild(originNode)
   el.appendChild(originNode)
 }
 
-const _moveToolbarPosition = (e:MouseEvent)=>{
-  const x = e.clientX
-  // const y = e.clientY
-  // located the e target element position
-  const targetRect = (e.target as Element)?.getBoundingClientRect()
-  // const targetX = targetRect?.x
-  const targetY = targetRect?.y
-  // get the toolBarRef element width and height
-  const toolBarRefWidth = toolBarRef.value.$el.clientWidth
-  const toolBarRefHeight = toolBarRef.value.$el.clientHeight
-  // get the window width and height
-  const windowWidth = window.innerWidth
-  const windowHeight = window.innerHeight
-  // get the toolBarRef element left and top
-  let left = x! - toolBarRefWidth / 2 -300
-  let top = targetY! - toolBarRefHeight - 40
-  // if the toolBarRef element is out of the window, move it to the window
-  if (left < 0) {
-    left = 0
-  } else if (left + toolBarRefWidth > windowWidth) {
-    left = windowWidth - toolBarRefWidth
-  }
-  if (top < 0) {
-    top = 0
-  } else if (top + toolBarRefHeight > windowHeight) {
-    top = windowHeight - toolBarRefHeight
-  }
-  style.left = `${left}px`
+const _setPosition = (top:number, left:number)=>{
   style.top = `${top}px`
+  style.left = `${left}px`
 }
 
+/**
+ * Get cursor rect and offset inside the last node
+ * @param element The selected Node
+ * @param text the text before cursor on the selected Node
+ * @param cursorX event.clientX(usually mouse event)
+ * @returns {rect:DOMRect|null, offsetX:number} rect is the last line rect, offsetX is the offset of the last line text(usually used to calculate the cursor position)
+ */
+const _getCursorRectOffset = (element: Node, text: string, cursorX: number = 0): { rect: DOMRect | null, offsetX: number } => {
+  // create tmp span element
+  const tempSpan = document.createElement('span');
+  const style = window.getComputedStyle(element as HTMLElement);
+  tempSpan.style.fontSize = style.fontSize;
+  tempSpan.style.letterSpacing = style.letterSpacing;
+  tempSpan.style.whiteSpace = style.whiteSpace;
+  tempSpan.style.position = 'absolute';
+  tempSpan.style.visibility = 'hidden';
+  document.body.appendChild(tempSpan);
 
-const init = (e:Event, __:AditorDocState, view:AditorDocView)=>{
-  if(displayState.value === DisplayStateEnum.hide){
-    const container = document.getElementById(view.vNode.key as string)?.parentElement
-    _moveToolbarToElement(container as Element)
-    _moveToolbarPosition(e as MouseEvent)
-    setTimeout(()=>toolBarRef.value.$el.click(), 100)  
-  }  
+  tempSpan.textContent = text
+  let tempSpanWidth = 0
+  for (let rect of (tempSpan as Element)?.getClientRects()) {
+    tempSpanWidth += rect.width
+  }
+  let tempSpanWidthLeft = tempSpanWidth
+
+  let targetWidth = 0
+  let lastRect: DOMRect | null = null
+
+  for (let rect of (element as Element)?.getClientRects()) {
+    targetWidth += rect.width
+    if (Math.round(targetWidth) >= Math.round(tempSpanWidth)) {
+      const islineStart = Math.abs(rect.left - cursorX) < Math.abs(rect.right - cursorX) ? true : false
+      tempSpanWidthLeft = rect.width - (targetWidth - tempSpanWidth)
+      lastRect = rect
+      // Todo: it seems that the last line is not calculated correctly if rect is null(probably will not happen)
+      if (Math.round(targetWidth) == Math.round(tempSpanWidth) && islineStart) {
+        continue
+      } else {
+        break
+      }
+    }
+  }
+
+  return { rect: lastRect, offsetX: tempSpanWidthLeft }
+}
+
+/**
+ * Get selection position
+ * this function is used to get the position of the selection end node
+ * the end node must be a text node, otherwise it will return null
+ * @param e 
+ * @param targetElement 
+ * @returns {top:number, left:number} | null
+ */
+const _getSelectionPosition = (e: MouseEvent, targetElement: HTMLElement):{top:number, left:number}|null => {
+
+  // get endElement parent offset
+  const _getClientOffset = (element: HTMLElement) => {
+    let top = 0, left = 0;
+    while (element) {
+      top += element.offsetTop || 0;
+      left += element.offsetLeft || 0;
+      element = element.offsetParent as HTMLElement;
+    }
+    return { top: top, left: left };
+  }
+
+  // get current selection end node
+  const selection = window.getSelection()
+  const range = selection?.getRangeAt(0)
+  const anchorNode = selection?.anchorNode
+  const anchorOffset = selection?.anchorOffset
+  const startNode = range?.startContainer
+  const startOffset = range?.startOffset
+  const endNode = range?.endContainer
+  const endOffset = range?.endOffset
+
+  // // get line height of endElement
+  // const clientX = e.clientX
+  // const clientY = e.clientY
+  // // get button self height and width
+  // const buttonHeight = toolBarRef.value.$el.clientHeight
+  const buttonWidth = toolBarRef.value.$el.clientWidth
+
+  let isFrontToBack = false
+  // By comparing anchorNode,startNode and endNode, determine whether the user is from front to back or from back to front
+  if (anchorNode == null || startNode == null || endNode == null || anchorOffset == null || startOffset == null || endOffset == null) {
+    console.warn("Can't get one of 'anchorNode, startNode, endNode, anchorOffset, startOffset'")
+    return null
+  }
+
+  if (endNode === startNode) {
+    isFrontToBack = anchorOffset <= startOffset
+  } else {
+    isFrontToBack = anchorNode?.compareDocumentPosition(endNode as Node) === Node.DOCUMENT_POSITION_FOLLOWING
+  }
+
+  let reversedNode: Node | null = isFrontToBack ? endNode : startNode
+  let reversedOffset: number | null = isFrontToBack ? endOffset : startOffset
+
+  if (reversedNode === null) {
+    console.warn("Can't get reversedNode, not move toolBar")
+    return null
+  }
+
+  if (reversedNode.nodeType !== Node.TEXT_NODE) {
+    console.warn("reversedNode is not text node, not move toolBar")
+    return null
+  }
+
+  reversedNode = reversedNode.parentElement
+  if (reversedNode === null) {
+    console.warn("Can't get reversedNode, not move toolBar")
+    return null
+  }
+
+  const reversedRect = (reversedNode as HTMLElement).getBoundingClientRect()
+  if (reversedRect === null) {
+    console.warn("Can't get reversedRect, not move toolBar")
+    return null
+  }
+
+  const text = (reversedNode as HTMLElement).innerText.substring(0, reversedOffset)
+  // get cursor line number
+  const { rect: lastRect, offsetX } = _getCursorRectOffset(reversedNode as HTMLElement, text, e.clientX)
+  const parentNodeOffset = _getClientOffset(targetElement)
+
+
+  if (lastRect === null) {
+    console.warn("Can't get lastRect, not move toolBar")
+    return null
+  }
+
+  const reversedNodeOffset = _getClientOffset(reversedNode as HTMLElement)
+  const offsetY = lastRect.top - reversedRect.top
+
+  const toobalTop = reversedNodeOffset.top + offsetY - parentNodeOffset.top
+  const toobalLeft = lastRect.left - parentNodeOffset.left + offsetX - buttonWidth / 2
+
+  return {top:toobalTop, left: toobalLeft}
+}
+
+let moveTimeout:number|undefined = undefined
+
+const init = (e: Event, __: AditorDocState, view: AditorDocView) => {
+  const _showToolBar = () => {
+    if (window.getSelection()?.anchorNode === window.getSelection()?.focusNode && window.getSelection()?.anchorOffset === window.getSelection()?.focusOffset) {
+        return
+    }
+
+    if (displayState.value === DisplayStateEnum.hide) {
+      // get the current aditorDoc's root element
+      const container = document.getElementById(view.vNode.key as string)?.parentElement
+      const selPos = _getSelectionPosition(e as MouseEvent, container as HTMLElement)
+      if (selPos) {
+        _setPosition(selPos.top, selPos.left)
+      }
+      _moveToolbarToElement(container as Element)
+      toolBarRef.value.$el.click()
+    }else{
+      setTimeout(()=>_showToolBar(), 50)
+    }
+  }
+  
+  clearTimeout(moveTimeout)
+  moveTimeout = setTimeout(() => {
+    _showToolBar()
+  }, 50)
+  
+}
+
+const onHide = () => {
+  _moveToolbarToElement(document.body)
+  _setPosition(-10000, -10000)
+  displayState.value = DisplayStateEnum.onHide
 }
 
 defineExpose({
@@ -166,13 +307,17 @@ defineExpose({
 </script>
 
 <template>
-  <el-popover popper-style="padding:8px" trigger="click" placement="top" width="445"
-
-    @before-enter="displayState = DisplayStateEnum.onShow"
+  <el-popover 
+    popper-style="padding:8px;" 
+    trigger="click" 
+    placement="top" 
+    width="445"
+    @before-enter="displayState = DisplayStateEnum.onShow" 
     @after-enter="displayState = DisplayStateEnum.show"
-    @before-leave="displayState = DisplayStateEnum.onHide"
+    @before-leave="()=>onHide()" 
     @after-leave="displayState = DisplayStateEnum.hide"
-  >
+    :hide-after="0"
+    >
     <el-space :size="size">
       <el-dropdown>
         <el-button text>
@@ -187,8 +332,10 @@ defineExpose({
         <template #dropdown>
           <el-dropdown-menu>
             <template v-for="(item, _) in titleList" :key="item.key">
-              <el-dropdown-item v-if="toolBarAttrs.title !== item.key" :icon="item.icon">{{ item.title }}</el-dropdown-item>
-              <el-dropdown-item v-else :icon="item.selectedIcon"><span style="color:var(--el-color-primary)">{{ item.title }}</span></el-dropdown-item>
+              <el-dropdown-item v-if="toolBarAttrs.title !== item.key" :icon="item.icon">{{ item.title
+              }}</el-dropdown-item>
+              <el-dropdown-item v-else :icon="item.selectedIcon"><span style="color:var(--el-color-primary)">{{ item.title
+              }}</span></el-dropdown-item>
             </template>
           </el-dropdown-menu>
         </template>
@@ -218,43 +365,43 @@ defineExpose({
       <el-divider direction="vertical" />
 
       <!-- fontWeight -->
-      <el-button text :class="toolBarAttrs.fontWeight ? 'tool-bar-item-selected':''">
-        <el-icon :color="toolBarAttrs.fontWeight ? 'var(--el-color-primary)':''">
+      <el-button text :class="toolBarAttrs.fontWeight ? 'tool-bar-item-selected' : ''">
+        <el-icon :color="toolBarAttrs.fontWeight ? 'var(--el-color-primary)' : ''">
           <BoldIcon />
         </el-icon>
       </el-button>
 
       <!-- strikethrough -->
-      <el-button text :class="toolBarAttrs.strikethrough ? 'tool-bar-item-selected':''">
-        <el-icon :color="toolBarAttrs.strikethrough ? 'var(--el-color-primary)':''">
+      <el-button text :class="toolBarAttrs.strikethrough ? 'tool-bar-item-selected' : ''">
+        <el-icon :color="toolBarAttrs.strikethrough ? 'var(--el-color-primary)' : ''">
           <StrikethroughIcon />
         </el-icon>
       </el-button>
 
       <!-- italic -->
-      <el-button text :class="toolBarAttrs.italic ? 'tool-bar-item-selected':''">
-        <el-icon :color="toolBarAttrs.italic ? 'var(--el-color-primary)':''">
+      <el-button text :class="toolBarAttrs.italic ? 'tool-bar-item-selected' : ''">
+        <el-icon :color="toolBarAttrs.italic ? 'var(--el-color-primary)' : ''">
           <ItalicIcon />
         </el-icon>
       </el-button>
 
       <!-- underline -->
-      <el-button text :class="toolBarAttrs.underline ? 'tool-bar-item-selected':''">
-        <el-icon :color="toolBarAttrs.underline ? 'var(--el-color-primary)':''">
+      <el-button text :class="toolBarAttrs.underline ? 'tool-bar-item-selected' : ''">
+        <el-icon :color="toolBarAttrs.underline ? 'var(--el-color-primary)' : ''">
           <UnderlineIcon />
         </el-icon>
       </el-button>
 
       <!-- link -->
-      <el-button text :class="toolBarAttrs.link ? 'tool-bar-item-selected':''">
-        <el-icon :color="toolBarAttrs.link ? 'var(--el-color-primary)':''">
+      <el-button text :class="toolBarAttrs.link ? 'tool-bar-item-selected' : ''">
+        <el-icon :color="toolBarAttrs.link ? 'var(--el-color-primary)' : ''">
           <LinkIcon />
         </el-icon>
       </el-button>
 
       <el-popover :width="330" trigger="hover">
         <template #reference>
-          <el-button text :style="{backgroundColor: BACKGROUND_COLOR[toolBarAttrs.backgroundColor]}">
+          <el-button text :style="{ backgroundColor: BACKGROUND_COLOR[toolBarAttrs.backgroundColor] }">
             <el-icon :color="TEXT_COLOR[toolBarAttrs.textColor]">
               <ColorIcon />
             </el-icon>
@@ -277,7 +424,8 @@ defineExpose({
           <div>
             <el-row :gutter="0" style="width:300px;">
               <el-col v-for="(color, key) in BACKGROUND_COLOR" :key="key" :span="3" style="padding-bottom: 3px;">
-                <el-button size="small" :style="{ backgroundColor: color }" :class="key === toolBarAttrs.backgroundColor ? 'bg-color-sel':''">
+                <el-button size="small" :style="{ backgroundColor: color }"
+                  :class="key === toolBarAttrs.backgroundColor ? 'bg-color-sel' : ''">
                   <el-icon :size="8">
                   </el-icon>
                 </el-button>
@@ -288,7 +436,7 @@ defineExpose({
       </el-popover>
     </el-space>
     <template #reference>
-      <el-button ref="toolBarRef" :style="style">Hi</el-button>
+      <el-button ref="toolBarRef" :style="style" class="tool-bar-button">Hi</el-button>
     </template>
   </el-popover>
 </template>
@@ -299,15 +447,22 @@ defineExpose({
   border-width: 2px;
   border-color: var(--el-color-primary);
 }
-.bg-color-sel{
+
+.bg-color-sel {
   border-width: 2px;
   border-color: var(--el-color-primary);
 }
 
-.tool-bar-item-selected{
-  background-color: var(--el-color-primary-light-9)!important;
+.tool-bar-item-selected {
+  background-color: var(--el-color-primary-light-9) !important;
 }
-.tool-bar-item-selected:hover{
-  background-color: var(--el-color-primary-light-8)!important;
+
+.tool-bar-item-selected:hover {
+  background-color: var(--el-color-primary-light-8) !important;
+}
+
+
+.tool-bar-button {
+  transition: top 0s ease-in-out, left 0s ease-in-out;
 }
 </style>
