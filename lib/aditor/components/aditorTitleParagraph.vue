@@ -1,5 +1,5 @@
 <template>
-  <div class="aditor-title" :style="aNode.validStyle()" :selstart="selStart" :seloffsetcor="selOffsetCor"><slot></slot><br :selstart="selStart" v-if="aNode.children.length == 1 && aNode.children[0].length() == 0" /></div>
+  <div :class="`aditor-title-h${titleLevel}`" :style="aNode.validStyle()" :selstart="selStart" :seloffsetcor="selOffsetCor"><slot></slot><br :selstart="selStart" v-if="aNode.children.length == 1 && aNode.children[0].length() == 0" /></div>
 </template>
 
 <script lang="ts">
@@ -104,9 +104,17 @@ export default defineComponent({
       return 0
     })
 
+    const titleLevel = computed(()=>{
+      if(props.aNode.data.titleLevel == undefined){
+        return 1
+      }
+      return props.aNode.data.titleLevel
+    })
+
     return {
       selStart,
-      selOffsetCor
+      selOffsetCor,
+      titleLevel
     }
   },
 
@@ -117,8 +125,19 @@ export default defineComponent({
 </script>
 
 <style scoped>
-.aditor-title{
+.aditor-title-h1{
   font-weight: bold!important;
-  font-size: 24px!important;
+  font-size: 26px!important;
 }
+
+.aditor-title-h2{
+  font-weight: bold!important;
+  font-size: 22px!important;
+}
+
+.aditor-title-h3{
+  font-weight: bold!important;
+  font-size: 20px!important;
+}
+
 </style>

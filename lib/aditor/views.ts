@@ -238,6 +238,14 @@ export class AditorDocView {
         }
 
         copyState.calPosition()
+        // Merge all nodes below the parent node of the selected node
+        vselsNode.forEach((sel) => {
+            const mergeNode = sel.startNode ? copyState.findNodeParentNodeByPos(sel.startNode.start) : null
+            if(mergeNode)
+                mergeNode.selfMerge(mergeNode.start, mergeNode.end, [sel])
+        })
+
+
         states.root.children = copyState.root.children
         states.sels.setSelectionsByNodeSelection(vselsNode)
         console.log("stay sels: ", vselsNode[0])
@@ -333,9 +341,10 @@ export class AditorDocView {
                         return { node: prevNode, offset: prevPos - prevNode.start }
                     } else if (parentNode.id !== prevNode.id) { // if prev node is not the parent node, return prevNode and Pos
                         if (prevNode instanceof AditorChildNode) {
-                            return _recursiveFindPrevNode(prevPos, prevNode)
+                            const prevNodeRightChildNode = prevNode._dfsDeepestRightEndNode()
+                            return {node: prevNodeRightChildNode, offset: prevNodeRightChildNode.length()}
                         } else {
-                            return { node: prevNode, offset: prevNode.length() }
+                            return { node: prevNode, offset: prevNode.length()-1}
                         }
                     } else if (parentNode.id === prevNode.id) { // if prev node is the parent node, stop the recursive, and return node and prevPos
                         return _recursiveFindPrevNode(prevPos, prevNode)
