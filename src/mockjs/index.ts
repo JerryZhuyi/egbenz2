@@ -68,6 +68,23 @@ function importMock() {
                 },
                 "children": [
                     {
+                        "name": "aditorTitleParagraph",
+                        "type": "child",
+                        "style": {},
+                        "data": {
+                            "level": "1",
+                        },
+                        "children": [{
+                            "name": "aditorText",
+                            "type": "leaf",
+                            "style": {},
+                            "data": {
+                                "text": "标题1",
+                            },
+                            "children": []
+                        }]
+                    }
+                    , {
                         "name": "aditorParagraph",
                         "type": "child",
                         "style": {},

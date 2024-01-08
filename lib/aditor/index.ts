@@ -7,7 +7,7 @@ import { AditorNodeFactory, ANodeType, AditorChildNode, AditorLeafNode, ANode, N
 import aditor from './components/aditor.vue';
 import aditorText from './components/aditorText.vue';
 import aditorParagraph from './components/aditorParagraph.vue';
-
+import aditorTitleParagraph from './components/aditorTitleParagraph.vue';
 
 // Init Nodes Structure
 export const aNodeFactory = new AditorNodeFactory();
@@ -59,6 +59,7 @@ function setComponentsDefaultConfig(name:string, component: any) {
 registerComponent(aditor.name, aditor)
 registerComponent(aditorParagraph.name, aditorParagraph)
 registerComponent(aditorText.name, aditorText)
+registerComponent(aditorTitleParagraph.name, aditorTitleParagraph)
 
 export function renderAditorFromJSON(json: any) {
     const docView = new AditorDocView()

@@ -1,7 +1,7 @@
 <template>
-  <div :style="aNode.validStyle()" :selstart="selStart" :seloffsetcor="selOffsetCor"><slot></slot><br :selstart="selStart" v-if="aNode.children.length == 1 && aNode.children[0].length() == 0" /></div>
+  <div class="aditor-title" :style="aNode.validStyle()" :selstart="selStart" :seloffsetcor="selOffsetCor"><slot></slot><br :selstart="selStart" v-if="aNode.children.length == 1 && aNode.children[0].length() == 0" /></div>
 </template>
-  
+
 <script lang="ts">
 import { defineComponent, PropType, computed } from 'vue'
 import { AditorChildNode, ANode, StyleNameEnum } from '@lib/aditor/nodes';
@@ -11,7 +11,6 @@ class AditorParagraphNode extends AditorChildNode {
   constructor(name: string, style:{}, data:{}) {
     super(name, style, data)
   }
-  
   /** 
    * @description merge text node
    * @param _start 
@@ -23,7 +22,6 @@ class AditorParagraphNode extends AditorChildNode {
     }
     const styleMergeCompareKey = [
       StyleNameEnum.fontStyle
-      , StyleNameEnum.fontWeight
       , StyleNameEnum.textDecoration
       , StyleNameEnum.color
       , StyleNameEnum.backgroundColor
@@ -35,6 +33,7 @@ class AditorParagraphNode extends AditorChildNode {
         return value
       }
     }
+
     const shouldMerge = (_node_1: ANode, _node_2: ANode)=>{
       if(_node_1.name === 'aditorText' && _node_2.name === 'aditorText'){
         // foreach dafaultStyleKey
@@ -75,7 +74,7 @@ class AditorParagraphNode extends AditorChildNode {
 }
 
 export default defineComponent({
-  name: 'aditorParagraph',
+  name: 'aditorTitleParagraph',
   props: {
     aNode: {
       type: Object as PropType<AditorChildNode>,
@@ -117,4 +116,9 @@ export default defineComponent({
 })
 </script>
 
-<style scoped></style>
+<style scoped>
+.aditor-title{
+  font-weight: bold!important;
+  font-size: 24px!important;
+}
+</style>

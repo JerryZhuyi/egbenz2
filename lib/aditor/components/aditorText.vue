@@ -1,5 +1,5 @@
 <template>
-  <span :style="style" :seloffsetcor="selOffsetCor">{{ aNode.data.text ? aNode.data.text:"&#8203;" }}</span>
+  <span :style="aNode.validStyle()" :seloffsetcor="selOffsetCor">{{ aNode.data.text ? aNode.data.text:"&#8203;" }}</span>
 </template>
 
 <script lang="ts">
@@ -32,17 +32,8 @@ export default defineComponent({
       return 0
     })
 
-    const style = computed(()=>{
-      if(props.aNode.style){
-        return props.aNode.style
-      }else{
-        return {}
-      }
-    })
-  
     return {
-      selOffsetCor,
-      style
+      selOffsetCor    
     }
   },
   aditorConfig:{

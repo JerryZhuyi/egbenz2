@@ -1,20 +1,13 @@
-import { docStruct, aNodeFactory } from ".";
+import { aNodeFactory } from ".";
 import {nanoid} from 'nanoid';
 
-/**
- * generate random id
- * @returns 
- */
-function uuid() {
-    const padStart = (str: string, length: number, padChar: string)=>{
-        while (str.length < length) {
-            str = padChar + str;
-        }
-        return str;
-    }
-    const timestamp = Date.now().toString()
-    const random = padStart(Math.floor(Math.random() * 100000).toString(), 5, "0")
-    return timestamp + random
+export enum StyleNameEnum {
+    fontWeight = "font-weight",
+    fontStyle = "font-style",
+    textDecoration = "text-decoration",
+    color = "color",
+    backgroundColor = "background-color",
+    textAlign = "text-align",
 }
 
 export type NodeSelectionType = {
@@ -38,6 +31,8 @@ export abstract class ANode {
     end: number;
     style: { [key: string]: any };
     data: { [key: string]: any };
+    // init with all StyleNameEnum
+    validStyleList: StyleNameEnum[] = Object.values(StyleNameEnum);
 
     constructor(name: string, style:{}, data:{}) {
         this.id = nanoid();
@@ -68,6 +63,8 @@ export abstract class ANode {
     abstract length(): number;
     abstract insertNode(_node: AditorChildNode|AditorLeafNode, _start:number): AditorChildNode | AditorLeafNode | null;
 
+    abstract validStyle(): { [key: string]: string } | {};
+
     /**
      * _isEmpty is a method used to check if the node is empty
      */
@@ -90,6 +87,9 @@ export class AditorChildNode extends ANode {
         super(name, style, data);
         this.type=ANodeType.Child;
         this.children = [];
+        this.validStyleList = [
+            StyleNameEnum.textAlign
+        ];
     }
 
     calPosition(prevEnd: number = 0) {
@@ -231,6 +231,15 @@ export class AditorChildNode extends ANode {
         }
         return null
     }
+    validStyle(): { [key: string]: string } | {} {
+        const validStyle: { [key: string]: string } = {};
+        for (const styleName of this.validStyleList) {
+            if (this.style[styleName]) {
+                validStyle[styleName] = this.style[styleName];
+            }
+        }
+        return Object.keys(validStyle).length > 0 ? validStyle : {};
+    }
     /**
      * recursive call _isEmpty to check if node is empty
      */
@@ -278,6 +287,13 @@ export class AditorLeafNode extends ANode {
     constructor(name:string, style:{}, data:{}) {
         super(name, style, data);
         this.type=ANodeType.Leaf;
+        this.validStyleList = [
+            StyleNameEnum.fontWeight
+            , StyleNameEnum.fontStyle
+            , StyleNameEnum.textDecoration
+            , StyleNameEnum.color
+            , StyleNameEnum.backgroundColor
+        ];
     }
 
     calPosition(prevEnd: number = 0) {
@@ -343,6 +359,15 @@ export class AditorLeafNode extends ANode {
     }
     length(): number {
         return this.data.text.length
+    }
+    validStyle(): { [key: string]: string } | {} {
+        const validStyle: { [key: string]: string } = {};
+        for (const styleName of this.validStyleList) {
+            if (this.style[styleName]) {
+                validStyle[styleName] = this.style[styleName];
+            }
+        }
+        return Object.keys(validStyle).length > 0 ? validStyle : {};
     }
     _isEmpty(): boolean {
         return this.data.text.length === 0
