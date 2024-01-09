@@ -400,7 +400,7 @@ class Parser{
   }
   
   _isSelfClosingTag(tagName: string){
-    const selfTagList = ["br", "img", "hr", "input", "meta", "link", "base", "area", "embed", "param", "source", "track", "wbr"]
+    const selfTagList = ["br", "img", "hr", "input", "meta", "link", "base", "area", "embed", "param", "source", "track", "wbr", "col", "command", "keygen", "menuitem"]
     return selfTagList.includes(tagName)
   }
 
